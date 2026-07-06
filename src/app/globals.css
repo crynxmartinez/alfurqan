@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-playfair);
+  --font-body: var(--font-inter);
+
+  --color-brand-50: #f7f7f8;
+  --color-brand-100: #eeeef0;
+  --color-brand-200: #d9dade;
+  --color-brand-300: #b8bac1;
+  --color-brand-400: #91949e;
+  --color-brand-500: #6f7280;
+  --color-brand-600: #585b68;
+  --color-brand-700: #484a55;
+  --color-brand-800: #3d3e47;
+  --color-brand-900: #36373e;
+  --color-brand-950: #232429;
+}
+
+body {
+  background-color: white;
+  color: var(--color-brand-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+@utility bg-geo-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%23d9dade' stroke-width='1'%3E%3Cpath d='M30 0 L60 30 L30 60 L0 30 Z'/%3E%3Ccircle cx='30' cy='30' r='14'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.geo-divider {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cg fill='none' stroke='%23b8bac1' stroke-width='1'%3E%3Cpath d='M0 20 L20 0 L40 20 L60 0 L80 20 L60 40 L40 20 L20 40 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  height: 40px;
+}

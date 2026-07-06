@@ -8,12 +8,131 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Placeholder model to verify the DB connection.
-// Replace/extend with real education-platform models later.
+enum Role {
+  ADMIN
+  TEACHER
+}
+
+enum GradeComponent {
+  QUIZ
+  ASSIGNMENT
+  EXAM
+}
+
+// Staff accounts only (Admin/Teacher). Students have no login.
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  teacher      Teacher?
+}
+
+model Teacher {
+  id         String               @id @default(cuid())
+  userId     String               @unique
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId String?              @unique
+  assignments TeachingAssignment[]
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+}
+
+model Student {
+  id          String       @id @default(cuid())
+  studentId   String       @unique
+  name        String
+  enrollments Enrollment[]
+  gradeEntries GradeEntry[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model SchoolYear {
+  id          String                @id @default(cuid())
+  label       String                @unique // e.g. "2025-2026"
+  isActive    Boolean               @default(false)
+  sections    Section[]
+  enrollments Enrollment[]
+  assignments TeachingAssignment[]
+  createdAt   DateTime              @default(now())
+}
+
+model Section {
+  id           String                @id @default(cuid())
+  name         String                // e.g. "Grade 7 - A"
+  schoolYearId String
+  schoolYear   SchoolYear            @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  subjects     Subject[]
+  enrollments  Enrollment[]
+  createdAt    DateTime              @default(now())
+
+  @@unique([name, schoolYearId])
+}
+
+model Subject {
+  id          String                @id @default(cuid())
+  name        String                // e.g. "Mathematics"
+  sectionId   String
+  section     Section               @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  assignments TeachingAssignment[]
+  gradeItems  GradeItem[]
+  createdAt   DateTime              @default(now())
+
+  @@unique([name, sectionId])
+}
+
+model Enrollment {
+  id           String     @id @default(cuid())
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sectionId    String
+  section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  schoolYearId String
+  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([studentId, sectionId, schoolYearId])
+}
+
+model TeachingAssignment {
+  id           String     @id @default(cuid())
+  teacherId    String
+  teacher      Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subjectId    String
+  subject      Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  schoolYearId String
+  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([teacherId, subjectId, schoolYearId])
+}
+
+// An individual gradable item, e.g. "Quiz 1", "Assignment 2", "Midterm Exam"
+// Fixed weighting: QUIZ 20%, ASSIGNMENT 20%, EXAM 60% (applied at aggregation time)
+model GradeItem {
+  id          String         @id @default(cuid())
+  subjectId   String
+  subject     Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title       String         // e.g. "Quiz 1"
+  component   GradeComponent
+  maxScore    Float          @default(100)
+  entries     GradeEntry[]
+  createdAt   DateTime       @default(now())
+}
+
+model GradeEntry {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItemId String
+  gradeItem   GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  score       Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([studentId, gradeItemId])
 }
