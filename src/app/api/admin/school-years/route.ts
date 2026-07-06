@@ -13,7 +13,7 @@ async function requireAdmin() {
 export async function GET() {
   const schoolYears = await prisma.schoolYear.findMany({
     orderBy: { label: "desc" },
-    include: { _count: { select: { sections: true, subjects: true } } },
+    include: { _count: { select: { sections: true } } },
   });
   return NextResponse.json(schoolYears);
 }

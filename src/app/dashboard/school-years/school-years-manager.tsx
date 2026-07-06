@@ -6,7 +6,7 @@ interface SchoolYear {
   id: string;
   label: string;
   isActive: boolean;
-  _count: { sections: number; subjects: number };
+  _count: { sections: number };
 }
 
 export function SchoolYearsManager() {
@@ -107,21 +107,20 @@ export function SchoolYearsManager() {
               <th className="px-5 py-3 font-medium">Label</th>
               <th className="px-5 py-3 font-medium">Status</th>
               <th className="px-5 py-3 font-medium">Sections</th>
-              <th className="px-5 py-3 font-medium">Subjects</th>
               <th className="px-5 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-100">
             {loading && (
               <tr>
-                <td colSpan={5} className="px-5 py-6 text-center text-brand-500">
+                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
                   Loading...
                 </td>
               </tr>
             )}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-6 text-center text-brand-500">
+                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
                   No school years yet.
                 </td>
               </tr>
@@ -143,7 +142,6 @@ export function SchoolYearsManager() {
                   )}
                 </td>
                 <td className="px-5 py-3 text-brand-600">{item._count.sections}</td>
-                <td className="px-5 py-3 text-brand-600">{item._count.subjects}</td>
                 <td className="px-5 py-3 text-right">
                   <button
                     onClick={() => openEdit(item)}
