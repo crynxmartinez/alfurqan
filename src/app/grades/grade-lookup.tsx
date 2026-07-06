@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 interface Option {
   id: string;
@@ -23,11 +23,17 @@ interface BreakdownItem {
   score: number | null;
 }
 
-interface Breakdown {
+interface ReportCardSubject {
+  subjectId: string;
   subjectName: string;
-  student: { name: string; studentId: string };
   items: BreakdownItem[];
   total: number;
+}
+
+interface ReportCard {
+  student: { name: string; studentId: string };
+  subjects: ReportCardSubject[];
+  overallAverage: number;
 }
 
 const COMPONENT_LABELS: Record<BreakdownItem["component"], string> = {
@@ -47,8 +53,13 @@ export function GradeLookup() {
 
   const [rows, setRows] = useState<GradeRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [breakdown, setBreakdown] = useState<Breakdown | null>(null);
-  const [breakdownLoading, setBreakdownLoading] = useState(false);
+
+  const [reportCards, setReportCards] = useState<Record<string, ReportCard>>({});
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [expandLoadingId, setExpandLoadingId] = useState<string | null>(null);
+
+  const [modalStudentId, setModalStudentId] = useState<string | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
   // Load school years on mount
   useEffect(() => {
@@ -65,6 +76,8 @@ export function GradeLookup() {
     setSections([]);
     setSubjects([]);
     setRows([]);
+    setReportCards({});
+    setExpandedStudentId(null);
     if (!schoolYearId) return;
     fetch(`/api/sections?schoolYearId=${schoolYearId}`)
       .then((r) => r.json())
@@ -76,7 +89,6 @@ export function GradeLookup() {
   useEffect(() => {
     setSubjectId("");
     setSubjects([]);
-    setRows([]);
     if (!sectionId) return;
     fetch(`/api/subjects?sectionId=${sectionId}`)
       .then((r) => r.json())
@@ -84,38 +96,57 @@ export function GradeLookup() {
       .catch(() => setSubjects([]));
   }, [sectionId]);
 
-  // Load grades when subject changes
+  // Load grades when section or subject changes
   useEffect(() => {
     setRows([]);
-    if (!subjectId) return;
+    setReportCards({});
+    setExpandedStudentId(null);
+    if (!sectionId) return;
     setLoading(true);
-    fetch(`/api/grades?subjectId=${subjectId}`)
+    const url = subjectId
+      ? `/api/grades?sectionId=${sectionId}&subjectId=${subjectId}`
+      : `/api/grades?sectionId=${sectionId}`;
+    fetch(url)
       .then((r) => r.json())
       .then(setRows)
       .catch(() => setRows([]))
       .finally(() => setLoading(false));
-  }, [subjectId]);
+  }, [sectionId, subjectId]);
 
-  async function openBreakdown(studentId: string) {
-    setBreakdownLoading(true);
-    setBreakdown(null);
-    try {
-      const res = await fetch(
-        `/api/grades/breakdown?subjectId=${subjectId}&studentId=${studentId}`
-      );
-      const data = await res.json();
-      setBreakdown(data);
-    } finally {
-      setBreakdownLoading(false);
+  async function fetchReportCard(studentId: string): Promise<ReportCard | null> {
+    if (reportCards[studentId]) return reportCards[studentId];
+    const res = await fetch(
+      `/api/grades/breakdown?sectionId=${sectionId}&studentId=${studentId}`
+    );
+    if (!res.ok) return null;
+    const data: ReportCard = await res.json();
+    setReportCards((prev) => ({ ...prev, [studentId]: data }));
+    return data;
+  }
+
+  async function toggleExpand(studentId: string) {
+    if (expandedStudentId === studentId) {
+      setExpandedStudentId(null);
+      return;
+    }
+    setExpandedStudentId(studentId);
+    if (!reportCards[studentId]) {
+      setExpandLoadingId(studentId);
+      await fetchReportCard(studentId);
+      setExpandLoadingId(null);
     }
   }
 
-  const grouped = breakdown
-    ? (["QUIZ", "ASSIGNMENT", "EXAM"] as const).map((component) => ({
-        component,
-        items: breakdown.items.filter((i) => i.component === component),
-      }))
-    : [];
+  async function openModal(studentId: string) {
+    setModalStudentId(studentId);
+    if (!reportCards[studentId]) {
+      setModalLoading(true);
+      await fetchReportCard(studentId);
+      setModalLoading(false);
+    }
+  }
+
+  const modalCard = modalStudentId ? reportCards[modalStudentId] : null;
 
   return (
     <div>
@@ -183,79 +214,137 @@ export function GradeLookup() {
         <table className="w-full text-left text-sm">
           <thead className="bg-brand-900 text-white">
             <tr>
+              <th className="w-10 px-3 py-3"></th>
               <th className="px-5 py-3 font-medium">Student Name</th>
               <th className="px-5 py-3 font-medium">Student ID</th>
-              <th className="px-5 py-3 text-right font-medium">Total Grade</th>
+              <th className="px-5 py-3 text-right font-medium">
+                {subjectId ? "Grade" : "Overall Average"}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-100">
             {loading && (
               <tr>
-                <td colSpan={3} className="px-5 py-6 text-center text-brand-500">
+                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
                   Loading...
                 </td>
               </tr>
             )}
-            {!loading && subjectId && rows.length === 0 && (
+            {!loading && sectionId && rows.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-5 py-6 text-center text-brand-500">
+                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
                   No records found.
                 </td>
               </tr>
             )}
-            {!loading && !subjectId && (
+            {!loading && !sectionId && (
               <tr>
-                <td colSpan={3} className="px-5 py-6 text-center text-brand-500">
-                  Select school year, class, and subject to view grades.
+                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
+                  Select school year and class to view grades.
                 </td>
               </tr>
             )}
-            {rows.map((row) => (
-              <tr
-                key={row.studentId}
-                onClick={() => openBreakdown(row.studentId)}
-                className="cursor-pointer hover:bg-brand-50"
-              >
-                <td className="px-5 py-3 font-medium text-brand-900">
-                  {row.name}
-                </td>
-                <td className="px-5 py-3 text-brand-600">{row.studentCode}</td>
-                <td className="px-5 py-3 text-right font-semibold text-brand-900">
-                  {row.total.toFixed(2)}
-                </td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const isExpanded = expandedStudentId === row.studentId;
+              const card = reportCards[row.studentId];
+              const isExpandLoading = expandLoadingId === row.studentId;
+
+              return (
+                <Fragment key={row.studentId}>
+                  <tr className="hover:bg-brand-50">
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        onClick={() => toggleExpand(row.studentId)}
+                        aria-label="Toggle details"
+                        className="rounded p-1 text-brand-500 hover:bg-brand-100"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => openModal(row.studentId)}
+                        className="font-medium text-brand-900 hover:underline"
+                      >
+                        {row.name}
+                      </button>
+                    </td>
+                    <td className="px-5 py-3 text-brand-600">{row.studentCode}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-brand-900">
+                      {row.total.toFixed(2)}
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="bg-brand-50">
+                      <td colSpan={4} className="px-5 py-4">
+                        {isExpandLoading && (
+                          <p className="text-sm text-brand-500">Loading...</p>
+                        )}
+                        {!isExpandLoading && card && (
+                          <ul className="space-y-1.5">
+                            {card.subjects.map((s) => (
+                              <li
+                                key={s.subjectId}
+                                className="flex justify-between rounded-md bg-white px-4 py-2 text-sm shadow-sm"
+                              >
+                                <span className="text-brand-700">{s.subjectName}</span>
+                                <span className="font-semibold text-brand-900">
+                                  {s.total.toFixed(2)}
+                                </span>
+                              </li>
+                            ))}
+                            <li className="flex justify-between rounded-md bg-brand-900 px-4 py-2 text-sm text-white">
+                              <span className="font-medium">Overall Average</span>
+                              <span className="font-bold">
+                                {card.overallAverage.toFixed(2)}
+                              </span>
+                            </li>
+                          </ul>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Modal */}
-      {(breakdown || breakdownLoading) && (
+      {/* Full report card modal */}
+      {modalStudentId && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          onClick={() => setBreakdown(null)}
+          onClick={() => setModalStudentId(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
           >
-            {breakdownLoading && (
+            {modalLoading && (
               <p className="py-10 text-center text-brand-500">Loading...</p>
             )}
-            {breakdown && !breakdownLoading && (
+            {modalCard && !modalLoading && (
               <>
-                <div className="mb-4 flex items-start justify-between">
+                <div className="mb-5 flex items-start justify-between">
                   <div>
                     <h3 className="font-display text-xl font-semibold text-brand-900">
-                      {breakdown.student.name}
+                      {modalCard.student.name}
                     </h3>
                     <p className="text-xs text-brand-500">
-                      {breakdown.student.studentId} &middot;{" "}
-                      {breakdown.subjectName}
+                      {modalCard.student.studentId}
                     </p>
                   </div>
                   <button
-                    onClick={() => setBreakdown(null)}
+                    onClick={() => setModalStudentId(null)}
                     className="rounded-full p-1 text-brand-400 hover:bg-brand-100 hover:text-brand-700"
                     aria-label="Close"
                   >
@@ -263,35 +352,60 @@ export function GradeLookup() {
                   </button>
                 </div>
 
-                {grouped.map(({ component, items }) => (
-                  <div key={component} className="mb-5">
-                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-500">
-                      {COMPONENT_LABELS[component]}
-                    </h4>
-                    {items.length === 0 ? (
-                      <p className="text-sm text-brand-400">No items recorded.</p>
-                    ) : (
-                      <ul className="space-y-1">
-                        {items.map((item) => (
-                          <li
-                            key={item.id}
-                            className="flex justify-between rounded-md bg-brand-50 px-3 py-2 text-sm"
-                          >
-                            <span className="text-brand-700">{item.title}</span>
-                            <span className="font-medium text-brand-900">
-                              {item.score ?? "—"} / {item.maxScore}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
+                {modalCard.subjects.map((subject) => {
+                  const grouped = (["QUIZ", "ASSIGNMENT", "EXAM"] as const).map(
+                    (component) => ({
+                      component,
+                      items: subject.items.filter((i) => i.component === component),
+                    })
+                  );
+
+                  return (
+                    <div
+                      key={subject.subjectId}
+                      className="mb-6 rounded-lg border border-brand-200 p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <h4 className="font-display text-base font-semibold text-brand-900">
+                          {subject.subjectName}
+                        </h4>
+                        <span className="text-sm font-bold text-brand-900">
+                          {subject.total.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {grouped.map(({ component, items }) => (
+                        <div key={component} className="mb-3 last:mb-0">
+                          <h5 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-brand-500">
+                            {COMPONENT_LABELS[component]}
+                          </h5>
+                          {items.length === 0 ? (
+                            <p className="text-xs text-brand-400">No items recorded.</p>
+                          ) : (
+                            <ul className="space-y-1">
+                              {items.map((item) => (
+                                <li
+                                  key={item.id}
+                                  className="flex justify-between rounded-md bg-brand-50 px-3 py-1.5 text-sm"
+                                >
+                                  <span className="text-brand-700">{item.title}</span>
+                                  <span className="font-medium text-brand-900">
+                                    {item.score ?? "—"} / {item.maxScore}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
 
                 <div className="mt-6 flex items-center justify-between rounded-md bg-brand-900 px-4 py-3 text-white">
-                  <span className="text-sm font-medium">Total Grade</span>
+                  <span className="text-sm font-medium">Overall Average</span>
                   <span className="text-lg font-bold">
-                    {breakdown.total.toFixed(2)}
+                    {modalCard.overallAverage.toFixed(2)}
                   </span>
                 </div>
               </>

@@ -46,26 +46,26 @@ async function main() {
     create: { label: "2025-2026", isActive: true },
   });
 
-  // Section
+  // Section (grade/room)
   const section = await prisma.section.upsert({
     where: { name_schoolYearId: { name: "Grade 7 - A", schoolYearId: schoolYear.id } },
     update: {},
     create: { name: "Grade 7 - A", schoolYearId: schoolYear.id },
   });
 
-  // Subject
+  // Subject (scoped to school year, reusable across sections)
   const subject = await prisma.subject.upsert({
-    where: { name_sectionId: { name: "Mathematics", sectionId: section.id } },
+    where: { name_schoolYearId: { name: "Mathematics", schoolYearId: schoolYear.id } },
     update: {},
-    create: { name: "Mathematics", sectionId: section.id },
+    create: { name: "Mathematics", schoolYearId: schoolYear.id },
   });
 
-  // Teaching assignment
-  await prisma.teachingAssignment.upsert({
+  // Teaching assignment (teacher + subject + section + school year)
+  const assignment = await prisma.teachingAssignment.upsert({
     where: {
-      teacherId_subjectId_schoolYearId: {
-        teacherId: teacher.id,
+      subjectId_sectionId_schoolYearId: {
         subjectId: subject.id,
+        sectionId: section.id,
         schoolYearId: schoolYear.id,
       },
     },
@@ -73,6 +73,7 @@ async function main() {
     create: {
       teacherId: teacher.id,
       subjectId: subject.id,
+      sectionId: section.id,
       schoolYearId: schoolYear.id,
     },
   });
@@ -121,12 +122,12 @@ async function main() {
   const gradeItems = [];
   for (const gi of gradeItemsData) {
     const existing = await prisma.gradeItem.findFirst({
-      where: { subjectId: subject.id, title: gi.title },
+      where: { teachingAssignmentId: assignment.id, title: gi.title },
     });
     const item =
       existing ??
       (await prisma.gradeItem.create({
-        data: { ...gi, subjectId: subject.id },
+        data: { ...gi, teachingAssignmentId: assignment.id },
       }));
     gradeItems.push(item);
   }

@@ -49,3 +49,13 @@ export function computeTotalGrade(items: GradeItemWithEntry[]): number {
   if (totalWeight === 0) return 0;
   return Math.round((weightedSum / totalWeight) * 100) / 100;
 }
+
+/**
+ * Computes a simple average of per-subject totals for a student's report
+ * card. Subjects with no recorded items/scores are excluded.
+ */
+export function computeOverallAverage(subjectTotals: number[]): number {
+  if (subjectTotals.length === 0) return 0;
+  const sum = subjectTotals.reduce((acc, t) => acc + t, 0);
+  return Math.round((sum / subjectTotals.length) * 100) / 100;
+}
