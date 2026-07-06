@@ -29,9 +29,11 @@ const TEACHER_NAV: NavItem[] = [
 export function DashboardSidebar({
   role,
   name,
+  onNavigate,
 }: {
   role: string;
   name: string;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const items = role === "ADMIN" ? ADMIN_NAV : TEACHER_NAV;
@@ -63,6 +65,7 @@ export function DashboardSidebar({
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={`block rounded-md px-4 py-2.5 text-sm font-medium transition ${
                 active
                   ? "bg-white text-brand-950"

@@ -32,7 +32,7 @@ export default async function HomePage() {
       <SiteNavbar />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-brand-950">
+      <section className="relative flex min-h-screen w-full items-center overflow-hidden bg-brand-950">
         <div className="absolute inset-0 bg-geo-pattern opacity-10" />
         {heroPhoto && (
           <Image
@@ -43,7 +43,7 @@ export default async function HomePage() {
             className="object-cover opacity-30"
           />
         )}
-        <div className="relative mx-auto flex max-w-7xl flex-col items-start px-6 py-28 md:py-36">
+        <div className="relative mx-auto flex w-full max-w-7xl flex-col items-start px-6 py-28 md:py-36">
           <span className="mb-4 inline-block rounded-full border border-brand-400 px-4 py-1 text-xs font-medium uppercase tracking-widest text-brand-200">
             Est. Al-Furqan Madrasah
           </span>
