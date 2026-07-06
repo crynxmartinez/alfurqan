@@ -16,10 +16,20 @@ export async function PATCH(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { name } = await req.json();
+  const { name, teacherId } = await req.json();
 
   try {
-    const subject = await prisma.subject.update({ where: { id }, data: { name } });
+    const subject = await prisma.subject.update({
+      where: { id },
+      data: {
+        ...(name !== undefined ? { name } : {}),
+        ...(teacherId !== undefined ? { teacherId } : {}),
+      },
+      include: {
+        section: { select: { id: true, name: true } },
+        teacher: { include: { user: { select: { id: true, name: true } } } },
+      },
+    });
     return NextResponse.json(subject);
   } catch {
     return NextResponse.json({ error: "Update failed." }, { status: 409 });

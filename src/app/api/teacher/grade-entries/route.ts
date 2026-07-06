@@ -19,7 +19,7 @@ export async function PUT(req: NextRequest) {
   const item = await prisma.gradeItem.findUnique({
     where: { id: gradeItemId },
     include: {
-      teachingAssignment: { include: { teacher: { select: { userId: true } } } },
+      subject: { include: { teacher: { select: { userId: true } } } },
     },
   });
 
@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Grade item not found" }, { status: 404 });
   }
 
-  const isOwner = item.teachingAssignment.teacher.userId === session.user.id;
+  const isOwner = item.subject.teacher.userId === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
   if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -5,11 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 type Component = "QUIZ" | "ASSIGNMENT" | "EXAM";
 
-interface AssignmentOption {
+interface SubjectOption {
   id: string;
-  subject: { name: string };
-  section: { name: string };
-  schoolYear: { label: string };
+  name: string;
+  section: { name: string; schoolYear: { label: string } };
 }
 
 interface Student {
@@ -27,9 +26,9 @@ interface GradeItem {
 }
 
 interface GradeEntryData {
-  assignment: {
+  subject: {
     id: string;
-    subject: { name: string };
+    name: string;
     section: { name: string };
     schoolYear: { label: string };
   };
@@ -46,9 +45,9 @@ const COMPONENT_LABELS: Record<Component, string> = {
 export function GradeEntryEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const assignmentId = searchParams.get("assignmentId");
+  const subjectId = searchParams.get("subjectId");
 
-  const [assignments, setAssignments] = useState<AssignmentOption[]>([]);
+  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
   const [data, setData] = useState<GradeEntryData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,18 +57,18 @@ export function GradeEntryEditor() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!assignmentId) {
-      fetch("/api/teacher/assignments")
+    if (!subjectId) {
+      fetch("/api/teacher/subjects")
         .then((r) => r.json())
-        .then(setAssignments)
+        .then(setSubjects)
         .finally(() => setLoading(false));
     }
-  }, [assignmentId]);
+  }, [subjectId]);
 
   async function loadData() {
-    if (!assignmentId) return;
+    if (!subjectId) return;
     setLoading(true);
-    const res = await fetch(`/api/teacher/grade-entry?assignmentId=${assignmentId}`);
+    const res = await fetch(`/api/teacher/grade-entry?subjectId=${subjectId}`);
     if (res.ok) {
       setData(await res.json());
     }
@@ -79,18 +78,18 @@ export function GradeEntryEditor() {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignmentId]);
+  }, [subjectId]);
 
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
-    if (!addingComponent || !assignmentId) return;
+    if (!addingComponent || !subjectId) return;
     setSaving(true);
 
     await fetch("/api/teacher/grade-items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        teachingAssignmentId: assignmentId,
+        subjectId,
         title: newTitle,
         component: addingComponent,
         maxScore: newMaxScore,
@@ -147,27 +146,27 @@ export function GradeEntryEditor() {
     return <p className="text-sm text-brand-500">Loading...</p>;
   }
 
-  if (!assignmentId) {
+  if (!subjectId) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {assignments.length === 0 && (
+        {subjects.length === 0 && (
           <p className="text-sm text-brand-500">
-            You have no teaching assignments yet.
+            You have no subjects assigned yet.
           </p>
         )}
-        {assignments.map((a) => (
+        {subjects.map((s) => (
           <button
-            key={a.id}
-            onClick={() => router.push(`/dashboard/grade-entry?assignmentId=${a.id}`)}
+            key={s.id}
+            onClick={() => router.push(`/dashboard/grade-entry?subjectId=${s.id}`)}
             className="rounded-xl border border-brand-200 bg-white p-5 text-left shadow-sm transition hover:shadow-md"
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">
-              {a.schoolYear.label}
+              {s.section.schoolYear.label}
             </p>
             <h3 className="mt-1 font-display text-lg font-semibold text-brand-900">
-              {a.subject.name}
+              {s.name}
             </h3>
-            <p className="mt-1 text-sm text-brand-600">{a.section.name}</p>
+            <p className="mt-1 text-sm text-brand-600">{s.section.name}</p>
           </button>
         ))}
       </div>
@@ -175,7 +174,7 @@ export function GradeEntryEditor() {
   }
 
   if (!data) {
-    return <p className="text-sm text-red-600">Assignment not found or unauthorized.</p>;
+    return <p className="text-sm text-red-600">Subject not found or unauthorized.</p>;
   }
 
   const componentGroups = (["QUIZ", "ASSIGNMENT", "EXAM"] as const).map((component) => ({
@@ -188,9 +187,9 @@ export function GradeEntryEditor() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="font-display text-lg font-semibold text-brand-900">
-            {data.assignment.subject.name} &middot; {data.assignment.section.name}
+            {data.subject.name} &middot; {data.subject.section.name}
           </h2>
-          <p className="text-xs text-brand-500">{data.assignment.schoolYear.label}</p>
+          <p className="text-xs text-brand-500">{data.subject.schoolYear.label}</p>
         </div>
         <button
           onClick={() => router.push("/dashboard/grade-entry")}

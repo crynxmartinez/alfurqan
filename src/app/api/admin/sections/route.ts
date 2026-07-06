@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     orderBy: [{ schoolYear: { label: "desc" } }, { name: "asc" }],
     include: {
       schoolYear: { select: { id: true, label: true } },
-      _count: { select: { enrollments: true, assignments: true } },
+      _count: { select: { enrollments: true, subjects: true } },
     },
   });
   return NextResponse.json(sections);

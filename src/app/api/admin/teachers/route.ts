@@ -14,7 +14,7 @@ export async function GET() {
     orderBy: { user: { name: "asc" } },
     include: {
       user: { select: { id: true, name: true, email: true } },
-      _count: { select: { assignments: true } },
+      _count: { select: { subjects: true } },
     },
   });
   return NextResponse.json(teachers);

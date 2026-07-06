@@ -2,39 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-async function canAccessAssignment(assignmentId: string) {
+async function canAccessSubject(subjectId: string) {
   const session = await auth();
   if (!session?.user) return false;
 
-  const assignment = await prisma.teachingAssignment.findUnique({
-    where: { id: assignmentId },
+  const subject = await prisma.subject.findUnique({
+    where: { id: subjectId },
     include: { teacher: { select: { userId: true } } },
   });
 
-  if (!assignment) return false;
-  const isOwner = assignment.teacher.userId === session.user.id;
+  if (!subject) return false;
+  const isOwner = subject.teacher.userId === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
   return isOwner || isAdmin;
 }
 
 export async function POST(req: NextRequest) {
-  const { teachingAssignmentId, title, component, maxScore } = await req.json();
+  const { subjectId, title, component, maxScore } = await req.json();
 
-  if (!teachingAssignmentId || !title || !component) {
+  if (!subjectId || !title || !component) {
     return NextResponse.json(
-      { error: "teachingAssignmentId, title, and component are required" },
+      { error: "subjectId, title, and component are required" },
       { status: 400 }
     );
   }
 
-  const allowed = await canAccessAssignment(teachingAssignmentId);
+  const allowed = await canAccessSubject(subjectId);
   if (!allowed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const gradeItem = await prisma.gradeItem.create({
     data: {
-      teachingAssignmentId,
+      subjectId,
       title,
       component,
       maxScore: maxScore ? Number(maxScore) : 100,

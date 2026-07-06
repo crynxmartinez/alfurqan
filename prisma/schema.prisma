@@ -32,13 +32,13 @@ model User {
 }
 
 model Teacher {
-  id         String               @id @default(cuid())
-  userId     String               @unique
-  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  employeeId String?              @unique
-  assignments TeachingAssignment[]
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId String?   @unique
+  subjects   Subject[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Student {
@@ -52,40 +52,41 @@ model Student {
 }
 
 model SchoolYear {
-  id          String                @id @default(cuid())
-  label       String                @unique // e.g. "2025-2026"
-  isActive    Boolean               @default(false)
+  id          String       @id @default(cuid())
+  label       String       @unique // e.g. "2025-2026"
+  isActive    Boolean      @default(false)
   sections    Section[]
-  subjects    Subject[]
   enrollments Enrollment[]
-  assignments TeachingAssignment[]
-  createdAt   DateTime              @default(now())
+  createdAt   DateTime     @default(now())
 }
 
 // A grade/room, e.g. "Grade 1 - A"
 model Section {
-  id           String                @id @default(cuid())
+  id           String       @id @default(cuid())
   name         String
   schoolYearId String
-  schoolYear   SchoolYear            @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  schoolYear   SchoolYear   @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
   enrollments  Enrollment[]
-  assignments  TeachingAssignment[]
-  createdAt    DateTime              @default(now())
+  subjects     Subject[]
+  createdAt    DateTime     @default(now())
 
   @@unique([name, schoolYearId])
 }
 
-// A subject defined once per school year, e.g. "Tawheed", "Fiqh".
-// Reused across multiple sections via TeachingAssignment.
+// A subject taught in one specific Section (grade/room), with exactly one
+// teacher assigned. e.g. "Tawheed" in Grade 1-A taught by Ustadh Ahmad, and a
+// separate "Tawheed" row for Grade 1-B possibly taught by a different teacher.
 model Subject {
-  id           String                @id @default(cuid())
-  name         String
-  schoolYearId String
-  schoolYear   SchoolYear            @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
-  assignments  TeachingAssignment[]
-  createdAt    DateTime              @default(now())
+  id         String      @id @default(cuid())
+  name       String
+  sectionId  String
+  section    Section     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  teacherId  String
+  teacher    Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  gradeItems GradeItem[]
+  createdAt  DateTime    @default(now())
 
-  @@unique([name, schoolYearId])
+  @@unique([name, sectionId])
 }
 
 model Enrollment {
@@ -101,37 +102,18 @@ model Enrollment {
   @@unique([studentId, sectionId, schoolYearId])
 }
 
-// Connects a Teacher to a Subject for a specific Section (grade/room) within a School Year.
-// e.g. Ustadh Ahmad teaches Tawheed in Grade 1-A; a different assignment may have
-// Ustadh Bilal teaching Tawheed in Grade 1-B in the same school year.
-model TeachingAssignment {
-  id           String      @id @default(cuid())
-  teacherId    String
-  teacher      Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  subjectId    String
-  subject      Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  sectionId    String
-  section      Section     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  schoolYearId String
-  schoolYear   SchoolYear  @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
-  gradeItems   GradeItem[]
-  createdAt    DateTime    @default(now())
-
-  @@unique([subjectId, sectionId, schoolYearId])
-}
-
 // An individual gradable item, e.g. "Quiz 1", "Assignment 2", "Midterm Exam"
-// Scoped to a TeachingAssignment (subject taught in a specific section).
+// Scoped to a Subject (which is already specific to one section/teacher).
 // Fixed weighting: QUIZ 20%, ASSIGNMENT 20%, EXAM 60% (applied at aggregation time)
 model GradeItem {
-  id                   String             @id @default(cuid())
-  teachingAssignmentId String
-  teachingAssignment   TeachingAssignment @relation(fields: [teachingAssignmentId], references: [id], onDelete: Cascade)
-  title                String             // e.g. "Quiz 1"
-  component            GradeComponent
-  maxScore             Float              @default(100)
-  entries              GradeEntry[]
-  createdAt            DateTime           @default(now())
+  id         String         @id @default(cuid())
+  subjectId  String
+  subject    Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title      String         // e.g. "Quiz 1"
+  component  GradeComponent
+  maxScore   Float          @default(100)
+  entries    GradeEntry[]
+  createdAt  DateTime       @default(now())
 }
 
 model GradeEntry {

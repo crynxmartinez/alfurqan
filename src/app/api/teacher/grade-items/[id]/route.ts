@@ -9,12 +9,12 @@ async function canAccessItem(itemId: string) {
   const item = await prisma.gradeItem.findUnique({
     where: { id: itemId },
     include: {
-      teachingAssignment: { include: { teacher: { select: { userId: true } } } },
+      subject: { include: { teacher: { select: { userId: true } } } },
     },
   });
 
   if (!item) return false;
-  const isOwner = item.teachingAssignment.teacher.userId === session.user.id;
+  const isOwner = item.subject.teacher.userId === session.user.id;
   const isAdmin = session.user.role === "ADMIN";
   return isOwner || isAdmin;
 }

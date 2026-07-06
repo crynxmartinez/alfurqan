@@ -17,7 +17,6 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/dashboard/teachers", label: "Teachers" },
   { href: "/dashboard/students", label: "Students" },
   { href: "/dashboard/enrollments", label: "Enrollments" },
-  { href: "/dashboard/assignments", label: "Teaching Assignments" },
 ];
 
 const TEACHER_NAV: NavItem[] = [

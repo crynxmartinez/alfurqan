@@ -9,13 +9,16 @@ async function requireAdmin() {
 }
 
 export async function GET(req: NextRequest) {
-  const schoolYearId = req.nextUrl.searchParams.get("schoolYearId");
+  const sectionId = req.nextUrl.searchParams.get("sectionId");
   const subjects = await prisma.subject.findMany({
-    where: schoolYearId ? { schoolYearId } : undefined,
-    orderBy: [{ schoolYear: { label: "desc" } }, { name: "asc" }],
+    where: sectionId ? { sectionId } : undefined,
+    orderBy: [{ section: { name: "asc" } }, { name: "asc" }],
     include: {
-      schoolYear: { select: { id: true, label: true } },
-      _count: { select: { assignments: true } },
+      section: {
+        select: { id: true, name: true, schoolYear: { select: { id: true, label: true } } },
+      },
+      teacher: { include: { user: { select: { id: true, name: true } } } },
+      _count: { select: { gradeItems: true } },
     },
   });
   return NextResponse.json(subjects);
@@ -25,20 +28,26 @@ export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, schoolYearId } = await req.json();
-  if (!name || !schoolYearId) {
+  const { name, sectionId, teacherId } = await req.json();
+  if (!name || !sectionId || !teacherId) {
     return NextResponse.json(
-      { error: "Name and school year are required" },
+      { error: "Name, section, and teacher are required" },
       { status: 400 }
     );
   }
 
   try {
-    const subject = await prisma.subject.create({ data: { name, schoolYearId } });
+    const subject = await prisma.subject.create({
+      data: { name, sectionId, teacherId },
+      include: {
+        section: { select: { id: true, name: true } },
+        teacher: { include: { user: { select: { id: true, name: true } } } },
+      },
+    });
     return NextResponse.json(subject, { status: 201 });
   } catch {
     return NextResponse.json(
-      { error: "A subject with this name already exists for that school year." },
+      { error: "A subject with this name already exists for that section." },
       { status: 409 }
     );
   }

@@ -19,10 +19,10 @@ export async function GET(req: NextRequest) {
     orderBy: { student: { name: "asc" } },
   });
 
-  const assignments = await prisma.teachingAssignment.findMany({
-    where: { sectionId, ...(subjectId ? { subjectId } : {}) },
+  const subjects = await prisma.subject.findMany({
+    where: { sectionId, ...(subjectId ? { id: subjectId } : {}) },
     select: {
-      subjectId: true,
+      id: true,
       gradeItems: {
         select: {
           id: true,
@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
   });
 
   const results = enrollments.map(({ student }) => {
-    const subjectTotals = assignments.map((assignment) => {
-      const items = assignment.gradeItems.map((item) => {
+    const subjectTotals = subjects.map((subject) => {
+      const items = subject.gradeItems.map((item) => {
         const entry = item.entries.find((e) => e.studentId === student.id);
         return {
           id: item.id,

@@ -11,7 +11,7 @@ interface Section {
   id: string;
   name: string;
   schoolYear: { id: string; label: string };
-  _count: { enrollments: number; assignments: number };
+  _count: { enrollments: number; subjects: number };
 }
 
 export function SectionsManager() {
@@ -161,7 +161,7 @@ export function SectionsManager() {
                 <td className="px-5 py-3 font-medium text-brand-900">{item.name}</td>
                 <td className="px-5 py-3 text-brand-600">{item.schoolYear.label}</td>
                 <td className="px-5 py-3 text-brand-600">{item._count.enrollments}</td>
-                <td className="px-5 py-3 text-brand-600">{item._count.assignments}</td>
+                <td className="px-5 py-3 text-brand-600">{item._count.subjects}</td>
                 <td className="px-5 py-3 text-right">
                   <button
                     onClick={() => openEdit(item)}

@@ -6,7 +6,7 @@ interface Teacher {
   id: string;
   employeeId: string | null;
   user: { id: string; name: string; email: string };
-  _count: { assignments: number };
+  _count: { subjects: number };
 }
 
 export function TeachersManager() {
@@ -110,7 +110,7 @@ export function TeachersManager() {
               <th className="px-5 py-3 font-medium">Name</th>
               <th className="px-5 py-3 font-medium">Email</th>
               <th className="px-5 py-3 font-medium">Employee ID</th>
-              <th className="px-5 py-3 font-medium">Assignments</th>
+              <th className="px-5 py-3 font-medium">Subjects</th>
               <th className="px-5 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
@@ -139,7 +139,7 @@ export function TeachersManager() {
                   {item.employeeId ?? "—"}
                 </td>
                 <td className="px-5 py-3 text-brand-600">
-                  {item._count.assignments}
+                  {item._count.subjects}
                 </td>
                 <td className="px-5 py-3 text-right">
                   <button

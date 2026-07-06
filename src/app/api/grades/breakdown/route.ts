@@ -16,13 +16,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const [assignments, student] = await Promise.all([
-    prisma.teachingAssignment.findMany({
+  const [subjectsData, student] = await Promise.all([
+    prisma.subject.findMany({
       where: { sectionId },
-      orderBy: { subject: { name: "asc" } },
+      orderBy: { name: "asc" },
       select: {
         id: true,
-        subject: { select: { id: true, name: true } },
+        name: true,
         gradeItems: {
           orderBy: [{ component: "asc" }, { createdAt: "asc" }],
           select: {
@@ -48,8 +48,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const subjects = assignments.map((assignment) => {
-    const items = assignment.gradeItems.map((item) => ({
+  const subjects = subjectsData.map((subject) => {
+    const items = subject.gradeItems.map((item) => ({
       id: item.id,
       title: item.title,
       component: item.component,
@@ -58,8 +58,8 @@ export async function GET(req: NextRequest) {
     }));
 
     return {
-      subjectId: assignment.subject.id,
-      subjectName: assignment.subject.name,
+      subjectId: subject.id,
+      subjectName: subject.name,
       items,
       total: computeTotalGrade(items),
     };

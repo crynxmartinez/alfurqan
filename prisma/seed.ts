@@ -53,29 +53,11 @@ async function main() {
     create: { name: "Grade 7 - A", schoolYearId: schoolYear.id },
   });
 
-  // Subject (scoped to school year, reusable across sections)
+  // Subject (scoped to one section, with a teacher tied to it)
   const subject = await prisma.subject.upsert({
-    where: { name_schoolYearId: { name: "Mathematics", schoolYearId: schoolYear.id } },
+    where: { name_sectionId: { name: "Mathematics", sectionId: section.id } },
     update: {},
-    create: { name: "Mathematics", schoolYearId: schoolYear.id },
-  });
-
-  // Teaching assignment (teacher + subject + section + school year)
-  const assignment = await prisma.teachingAssignment.upsert({
-    where: {
-      subjectId_sectionId_schoolYearId: {
-        subjectId: subject.id,
-        sectionId: section.id,
-        schoolYearId: schoolYear.id,
-      },
-    },
-    update: {},
-    create: {
-      teacherId: teacher.id,
-      subjectId: subject.id,
-      sectionId: section.id,
-      schoolYearId: schoolYear.id,
-    },
+    create: { name: "Mathematics", sectionId: section.id, teacherId: teacher.id },
   });
 
   // Students
@@ -122,12 +104,12 @@ async function main() {
   const gradeItems = [];
   for (const gi of gradeItemsData) {
     const existing = await prisma.gradeItem.findFirst({
-      where: { teachingAssignmentId: assignment.id, title: gi.title },
+      where: { subjectId: subject.id, title: gi.title },
     });
     const item =
       existing ??
       (await prisma.gradeItem.create({
-        data: { ...gi, teachingAssignmentId: assignment.id },
+        data: { ...gi, subjectId: subject.id },
       }));
     gradeItems.push(item);
   }
