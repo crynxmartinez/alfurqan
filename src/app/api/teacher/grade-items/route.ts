@@ -18,11 +18,11 @@ async function canAccessSubject(subjectId: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const { subjectId, title, component, maxScore } = await req.json();
+  const { subjectId, date, component, maxScore } = await req.json();
 
-  if (!subjectId || !title || !component) {
+  if (!subjectId || !date || !component) {
     return NextResponse.json(
-      { error: "subjectId, title, and component are required" },
+      { error: "subjectId, date, and component are required" },
       { status: 400 }
     );
   }
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const gradeItem = await prisma.gradeItem.create({
     data: {
       subjectId,
-      title,
+      date: new Date(date),
       component,
       maxScore: maxScore ? Number(maxScore) : 100,
     },

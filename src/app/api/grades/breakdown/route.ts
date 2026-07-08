@@ -24,10 +24,10 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         gradeItems: {
-          orderBy: [{ component: "asc" }, { createdAt: "asc" }],
+          orderBy: [{ component: "asc" }, { date: "asc" }],
           select: {
             id: true,
-            title: true,
+            date: true,
             component: true,
             maxScore: true,
             entries: {
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
   const subjects = subjectsData.map((subject) => {
     const items = subject.gradeItems.map((item) => ({
       id: item.id,
-      title: item.title,
+      date: item.date,
       component: item.component,
       maxScore: item.maxScore,
       score: item.entries[0]?.score ?? null,

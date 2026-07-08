@@ -23,6 +23,7 @@ model Counter {
 enum GradeComponent {
   QUIZ
   ASSIGNMENT
+  OTHERS
   EXAM
 }
 
@@ -109,14 +110,16 @@ model Enrollment {
   @@unique([studentId, sectionId, schoolYearId])
 }
 
-// An individual gradable item, e.g. "Quiz 1", "Assignment 2", "Midterm Exam"
-// Scoped to a Subject (which is already specific to one section/teacher).
-// Fixed weighting: QUIZ 20%, ASSIGNMENT 20%, EXAM 60% (applied at aggregation time)
+// An individual gradable column, identified by its date within a category
+// (Quiz/Assignment/Others/Exam). Scoped to a Subject (already specific to
+// one section/teacher).
+// Fixed weighting: QUIZ 20%, ASSIGNMENT 10%, OTHERS 10%, EXAM 60%
+// (applied at aggregation time)
 model GradeItem {
   id         String         @id @default(cuid())
   subjectId  String
   subject    Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  title      String         // e.g. "Quiz 1"
+  date       DateTime       // date this column represents, e.g. 2026-04-04
   component  GradeComponent
   maxScore   Float          @default(100)
   entries    GradeEntry[]

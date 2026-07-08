@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const [gradeItems, enrollments] = await Promise.all([
     prisma.gradeItem.findMany({
       where: { subjectId },
-      orderBy: [{ component: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ component: "asc" }, { date: "asc" }],
       include: { entries: { select: { studentId: true, score: true } } },
     }),
     prisma.enrollment.findMany({
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     students: enrollments.map((e) => e.student),
     gradeItems: gradeItems.map((item) => ({
       id: item.id,
-      title: item.title,
+      date: item.date,
       component: item.component,
       maxScore: item.maxScore,
       scores: Object.fromEntries(item.entries.map((e) => [e.studentId, e.score])),

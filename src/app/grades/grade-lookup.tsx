@@ -17,8 +17,8 @@ interface GradeRow {
 
 interface BreakdownItem {
   id: string;
-  title: string;
-  component: "QUIZ" | "ASSIGNMENT" | "EXAM";
+  date: string;
+  component: "QUIZ" | "ASSIGNMENT" | "OTHERS" | "EXAM";
   maxScore: number;
   score: number | null;
 }
@@ -38,7 +38,8 @@ interface ReportCard {
 
 const COMPONENT_LABELS: Record<BreakdownItem["component"], string> = {
   QUIZ: "Quizzes (20%)",
-  ASSIGNMENT: "Assignments (20%)",
+  ASSIGNMENT: "Assignments (10%)",
+  OTHERS: "Others (10%)",
   EXAM: "Exam (60%)",
 };
 
@@ -353,7 +354,7 @@ export function GradeLookup() {
                 </div>
 
                 {modalCard.subjects.map((subject) => {
-                  const grouped = (["QUIZ", "ASSIGNMENT", "EXAM"] as const).map(
+                  const grouped = (["QUIZ", "ASSIGNMENT", "OTHERS", "EXAM"] as const).map(
                     (component) => ({
                       component,
                       items: subject.items.filter((i) => i.component === component),
@@ -388,7 +389,9 @@ export function GradeLookup() {
                                   key={item.id}
                                   className="flex justify-between rounded-md bg-brand-50 px-3 py-1.5 text-sm"
                                 >
-                                  <span className="text-brand-700">{item.title}</span>
+                                  <span className="text-brand-700">
+                                    {new Date(item.date).toLocaleDateString()}
+                                  </span>
                                   <span className="font-medium text-brand-900">
                                     {item.score ?? "—"} / {item.maxScore}
                                   </span>

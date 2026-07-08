@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type Component = "QUIZ" | "ASSIGNMENT" | "EXAM";
+type Component = "QUIZ" | "ASSIGNMENT" | "OTHERS" | "EXAM";
 
 interface SubjectOption {
   id: string;
@@ -19,7 +19,7 @@ interface Student {
 
 interface GradeItem {
   id: string;
-  title: string;
+  date: string;
   component: Component;
   maxScore: number;
   scores: Record<string, number>;
@@ -36,11 +36,58 @@ interface GradeEntryData {
   gradeItems: GradeItem[];
 }
 
+// Kept in sync with src/lib/grades.ts (not imported directly since that
+// module pulls in @prisma/client, which shouldn't be bundled client-side).
+const COMPONENT_ORDER: Component[] = ["QUIZ", "ASSIGNMENT", "OTHERS", "EXAM"];
+
+const COMPONENT_WEIGHTS: Record<Component, number> = {
+  QUIZ: 0.2,
+  ASSIGNMENT: 0.1,
+  OTHERS: 0.1,
+  EXAM: 0.6,
+};
+
 const COMPONENT_LABELS: Record<Component, string> = {
-  QUIZ: "Quizzes (20%)",
-  ASSIGNMENT: "Assignments (20%)",
+  QUIZ: "Quiz (20%)",
+  ASSIGNMENT: "Assignment (10%)",
+  OTHERS: "Others (10%)",
   EXAM: "Exam (60%)",
 };
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function computeStudentTotal(gradeItems: GradeItem[], studentId: string): number | null {
+  const byComponent: Record<Component, { earned: number; max: number }> = {
+    QUIZ: { earned: 0, max: 0 },
+    ASSIGNMENT: { earned: 0, max: 0 },
+    OTHERS: { earned: 0, max: 0 },
+    EXAM: { earned: 0, max: 0 },
+  };
+
+  for (const item of gradeItems) {
+    const score = item.scores[studentId];
+    if (score == null) continue;
+    byComponent[item.component].earned += score;
+    byComponent[item.component].max += item.maxScore;
+  }
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const component of COMPONENT_ORDER) {
+    const { earned, max } = byComponent[component];
+    if (max <= 0) continue;
+    const percentage = (earned / max) * 100;
+    weightedSum += percentage * COMPONENT_WEIGHTS[component];
+    totalWeight += COMPONENT_WEIGHTS[component];
+  }
+
+  if (totalWeight === 0) return null;
+  return Math.round((weightedSum / totalWeight) * 100) / 100;
+}
 
 export function GradeEntryEditor() {
   const router = useRouter();
@@ -52,7 +99,7 @@ export function GradeEntryEditor() {
   const [loading, setLoading] = useState(true);
 
   const [addingComponent, setAddingComponent] = useState<Component | null>(null);
-  const [newTitle, setNewTitle] = useState("");
+  const [newDate, setNewDate] = useState("");
   const [newMaxScore, setNewMaxScore] = useState("100");
   const [saving, setSaving] = useState(false);
 
@@ -90,7 +137,7 @@ export function GradeEntryEditor() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subjectId,
-        title: newTitle,
+        date: newDate,
         component: addingComponent,
         maxScore: newMaxScore,
       }),
@@ -98,7 +145,7 @@ export function GradeEntryEditor() {
 
     setSaving(false);
     setAddingComponent(null);
-    setNewTitle("");
+    setNewDate("");
     setNewMaxScore("100");
     loadData();
   }
@@ -177,7 +224,7 @@ export function GradeEntryEditor() {
     return <p className="text-sm text-red-600">Subject not found or unauthorized.</p>;
   }
 
-  const componentGroups = (["QUIZ", "ASSIGNMENT", "EXAM"] as const).map((component) => ({
+  const componentGroups = COMPONENT_ORDER.map((component) => ({
     component,
     items: data.gradeItems.filter((i) => i.component === component),
   }));
@@ -199,72 +246,92 @@ export function GradeEntryEditor() {
         </button>
       </div>
 
-      {componentGroups.map(({ component, items }) => (
-        <div key={component} className="mb-8">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-display text-base font-semibold text-brand-900">
-              {COMPONENT_LABELS[component]}
-            </h3>
-            <button
-              onClick={() => {
-                setAddingComponent(component);
-                setNewTitle("");
-                setNewMaxScore("100");
-              }}
-              className="rounded-md bg-brand-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-800"
-            >
-              + Add Item
-            </button>
-          </div>
-
-          {data.students.length === 0 ? (
-            <p className="text-sm text-brand-400">
-              No students enrolled in this section yet.
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-brand-200 bg-white">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-brand-900 text-white">
-                  <tr>
-                    <th className="sticky left-0 z-10 min-w-[160px] bg-brand-900 px-4 py-3 font-medium">
-                      Student
-                    </th>
-                    {items.length === 0 ? (
-                      <th className="px-3 py-3 font-medium text-brand-300">
-                        No items yet — click &quot;+ Add Item&quot;
+      {data.students.length === 0 ? (
+        <p className="text-sm text-brand-400">
+          No students enrolled in this section yet.
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-brand-200 bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-brand-900 text-white">
+              <tr>
+                <th
+                  rowSpan={2}
+                  className="sticky left-0 z-20 min-w-[160px] bg-brand-900 px-4 py-3 align-bottom font-medium"
+                >
+                  Student
+                </th>
+                {componentGroups.map(({ component, items }) => (
+                  <th
+                    key={component}
+                    colSpan={items.length + 1}
+                    className="border-l border-brand-700 px-3 py-2 text-center font-medium"
+                  >
+                    {COMPONENT_LABELS[component]}
+                  </th>
+                ))}
+                <th
+                  rowSpan={2}
+                  className="min-w-[90px] border-l border-brand-700 px-3 py-3 text-center align-bottom font-medium"
+                >
+                  Total
+                </th>
+              </tr>
+              <tr>
+                {componentGroups.map(({ component, items }) =>
+                  [
+                    ...items.map((item) => (
+                      <th
+                        key={item.id}
+                        className="min-w-[100px] border-l border-brand-800 px-2 py-2 font-normal"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span>
+                            {formatDate(item.date)}{" "}
+                            <span className="text-brand-300">/{item.maxScore}</span>
+                          </span>
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            className="text-brand-300 hover:text-white"
+                            aria-label="Delete item"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </th>
-                    ) : (
-                      items.map((item) => (
-                        <th key={item.id} className="min-w-[120px] px-3 py-3 font-medium">
-                          <div className="flex items-center justify-between gap-2">
-                            <span>
-                              {item.title}{" "}
-                              <span className="text-brand-300">/ {item.maxScore}</span>
-                            </span>
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="text-brand-300 hover:text-white"
-                              aria-label="Delete item"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </th>
-                      ))
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-100">
-                  {data.students.map((student) => (
-                    <tr key={student.id}>
-                      <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium text-brand-900">
-                        {student.name}
-                      </td>
-                      {items.length === 0 ? (
-                        <td className="px-3 py-2 text-brand-300">—</td>
-                      ) : (
-                        items.map((item) => (
-                          <td key={item.id} className="px-3 py-2">
+                    )),
+                    <th
+                      key={`${component}-add`}
+                      className="min-w-[48px] border-l border-brand-800 px-2 py-2"
+                    >
+                      <button
+                        onClick={() => {
+                          setAddingComponent(component);
+                          setNewDate("");
+                          setNewMaxScore("100");
+                        }}
+                        className="rounded-md bg-brand-700 px-2 py-1 text-xs font-semibold text-white hover:bg-brand-600"
+                        aria-label={`Add ${COMPONENT_LABELS[component]} item`}
+                      >
+                        +
+                      </button>
+                    </th>,
+                  ]
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-brand-100">
+              {data.students.map((student) => {
+                const total = computeStudentTotal(data.gradeItems, student.id);
+                return (
+                  <tr key={student.id}>
+                    <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium text-brand-900">
+                      {student.name}
+                    </td>
+                    {componentGroups.map(({ component, items }) =>
+                      [
+                        ...items.map((item) => (
+                          <td key={item.id} className="border-l border-brand-100 px-2 py-2">
                             <input
                               type="number"
                               min={0}
@@ -273,19 +340,26 @@ export function GradeEntryEditor() {
                               onBlur={(e) =>
                                 handleScoreChange(student.id, item.id, e.target.value)
                               }
-                              className="w-20 rounded-md border border-brand-300 px-2 py-1 text-sm focus:border-brand-600 focus:outline-none"
+                              className="w-16 rounded-md border border-brand-300 px-2 py-1 text-sm focus:border-brand-600 focus:outline-none"
                             />
                           </td>
-                        ))
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                        )),
+                        <td
+                          key={`${component}-add-cell`}
+                          className="border-l border-brand-100 bg-brand-50/50 px-2 py-2"
+                        />,
+                      ]
+                    )}
+                    <td className="border-l border-brand-200 px-3 py-2 text-center font-semibold text-brand-900">
+                      {total ?? "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      ))}
+      )}
 
       {addingComponent && (
         <div
@@ -298,16 +372,16 @@ export function GradeEntryEditor() {
             className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
           >
             <h3 className="mb-4 font-display text-lg font-semibold text-brand-900">
-              Add {COMPONENT_LABELS[addingComponent]}
+              Add {COMPONENT_LABELS[addingComponent]} Item
             </h3>
 
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-              Title
+              Date
             </label>
             <input
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="e.g. Quiz 1"
+              type="date"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
               required
               className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
             />

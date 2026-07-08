@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       gradeItems: {
         select: {
           id: true,
-          title: true,
+          date: true,
           component: true,
           maxScore: true,
           entries: { select: { studentId: true, score: true } },
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         const entry = item.entries.find((e) => e.studentId === student.id);
         return {
           id: item.id,
-          title: item.title,
+          date: item.date,
           component: item.component,
           maxScore: item.maxScore,
           score: entry ? entry.score : null,
