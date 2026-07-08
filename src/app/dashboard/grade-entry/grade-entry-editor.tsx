@@ -340,7 +340,7 @@ export function GradeEntryEditor() {
                               onBlur={(e) =>
                                 handleScoreChange(student.id, item.id, e.target.value)
                               }
-                              className="w-16 rounded-md border border-brand-300 px-2 py-1 text-sm focus:border-brand-600 focus:outline-none"
+                              className="w-full min-w-0 rounded-md border border-brand-300 px-2 py-1 text-sm focus:border-brand-600 focus:outline-none"
                             />
                           </td>
                         )),
