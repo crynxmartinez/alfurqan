@@ -283,9 +283,9 @@ export function GradeEntryEditor() {
                     ...items.map((item) => (
                       <th
                         key={item.id}
-                        className="min-w-[100px] border-l border-brand-800 px-2 py-2 font-normal"
+                        className="border-l border-brand-800 px-2 py-2 text-center font-normal"
                       >
-                        <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center justify-center gap-1 whitespace-nowrap text-xs">
                           <span>
                             {formatDate(item.date)}{" "}
                             <span className="text-brand-300">/{item.maxScore}</span>
@@ -331,7 +331,10 @@ export function GradeEntryEditor() {
                     {componentGroups.map(({ component, items }) =>
                       [
                         ...items.map((item) => (
-                          <td key={item.id} className="border-l border-brand-100 px-2 py-2">
+                          <td
+                            key={item.id}
+                            className="border-l border-brand-100 px-2 py-2 text-center"
+                          >
                             <input
                               type="number"
                               min={0}
@@ -340,7 +343,7 @@ export function GradeEntryEditor() {
                               onBlur={(e) =>
                                 handleScoreChange(student.id, item.id, e.target.value)
                               }
-                              className="w-full min-w-0 rounded-md border border-brand-300 px-2 py-1 text-sm focus:border-brand-600 focus:outline-none"
+                              className="mx-auto w-14 rounded-md border border-brand-300 px-2 py-1 text-center text-sm focus:border-brand-600 focus:outline-none"
                             />
                           </td>
                         )),

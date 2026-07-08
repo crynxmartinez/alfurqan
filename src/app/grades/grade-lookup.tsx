@@ -148,6 +148,12 @@ export function GradeLookup() {
   }
 
   const modalCard = modalStudentId ? reportCards[modalStudentId] : null;
+  const currentSchoolYear = schoolYears.find((sy) => sy.id === schoolYearId);
+
+  function groupBySubjectFilter(card: ReportCard): ReportCardSubject[] {
+    if (!subjectId) return card.subjects;
+    return card.subjects.filter((s) => s.subjectId === subjectId);
+  }
 
   return (
     <div>
@@ -289,7 +295,7 @@ export function GradeLookup() {
                         {isExpandLoading && (
                           <p className="text-sm text-brand-500">Loading...</p>
                         )}
-                        {!isExpandLoading && card && (
+                        {!isExpandLoading && card && !subjectId && (
                           <ul className="space-y-1.5">
                             {card.subjects.map((s) => (
                               <li
@@ -302,13 +308,51 @@ export function GradeLookup() {
                                 </span>
                               </li>
                             ))}
-                            <li className="flex justify-between rounded-md bg-brand-900 px-4 py-2 text-sm text-white">
-                              <span className="font-medium">Overall Average</span>
-                              <span className="font-bold">
-                                {card.overallAverage.toFixed(2)}
-                              </span>
-                            </li>
                           </ul>
+                        )}
+                        {!isExpandLoading && card && subjectId && (
+                          <div className="space-y-3">
+                            {groupBySubjectFilter(card).map((subject) => {
+                              const grouped = (
+                                ["QUIZ", "ASSIGNMENT", "OTHERS", "EXAM"] as const
+                              ).map((component) => ({
+                                component,
+                                items: subject.items.filter((i) => i.component === component),
+                              }));
+                              return (
+                                <div key={subject.subjectId}>
+                                  {grouped.map(({ component, items }) => (
+                                    <div key={component} className="mb-2 last:mb-0">
+                                      <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-500">
+                                        {COMPONENT_LABELS[component]}
+                                      </h5>
+                                      {items.length === 0 ? (
+                                        <p className="text-xs text-brand-400">
+                                          No items recorded.
+                                        </p>
+                                      ) : (
+                                        <ul className="space-y-1">
+                                          {items.map((item) => (
+                                            <li
+                                              key={item.id}
+                                              className="flex justify-between rounded-md bg-white px-3 py-1.5 text-sm shadow-sm"
+                                            >
+                                              <span className="text-brand-700">
+                                                {new Date(item.date).toLocaleDateString()}
+                                              </span>
+                                              <span className="font-medium text-brand-900">
+                                                {item.score ?? "—"} / {item.maxScore}
+                                              </span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -342,6 +386,7 @@ export function GradeLookup() {
                     </h3>
                     <p className="text-xs text-brand-500">
                       {modalCard.student.studentId}
+                      {currentSchoolYear ? ` · ${currentSchoolYear.label}` : ""}
                     </p>
                   </div>
                   <button
@@ -353,7 +398,7 @@ export function GradeLookup() {
                   </button>
                 </div>
 
-                {modalCard.subjects.map((subject) => {
+                {groupBySubjectFilter(modalCard).map((subject) => {
                   const grouped = (["QUIZ", "ASSIGNMENT", "OTHERS", "EXAM"] as const).map(
                     (component) => ({
                       component,
@@ -404,13 +449,6 @@ export function GradeLookup() {
                     </div>
                   );
                 })}
-
-                <div className="mt-6 flex items-center justify-between rounded-md bg-brand-900 px-4 py-3 text-white">
-                  <span className="text-sm font-medium">Overall Average</span>
-                  <span className="text-lg font-bold">
-                    {modalCard.overallAverage.toFixed(2)}
-                  </span>
-                </div>
               </>
             )}
           </div>
