@@ -217,8 +217,10 @@ export function GradeEntryEditor() {
             </button>
           </div>
 
-          {items.length === 0 ? (
-            <p className="text-sm text-brand-400">No items yet.</p>
+          {data.students.length === 0 ? (
+            <p className="text-sm text-brand-400">
+              No students enrolled in this section yet.
+            </p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-brand-200 bg-white">
               <table className="w-full text-left text-sm">
@@ -227,23 +229,29 @@ export function GradeEntryEditor() {
                     <th className="sticky left-0 z-10 min-w-[160px] bg-brand-900 px-4 py-3 font-medium">
                       Student
                     </th>
-                    {items.map((item) => (
-                      <th key={item.id} className="min-w-[120px] px-3 py-3 font-medium">
-                        <div className="flex items-center justify-between gap-2">
-                          <span>
-                            {item.title}{" "}
-                            <span className="text-brand-300">/ {item.maxScore}</span>
-                          </span>
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="text-brand-300 hover:text-white"
-                            aria-label="Delete item"
-                          >
-                            ✕
-                          </button>
-                        </div>
+                    {items.length === 0 ? (
+                      <th className="px-3 py-3 font-medium text-brand-300">
+                        No items yet — click &quot;+ Add Item&quot;
                       </th>
-                    ))}
+                    ) : (
+                      items.map((item) => (
+                        <th key={item.id} className="min-w-[120px] px-3 py-3 font-medium">
+                          <div className="flex items-center justify-between gap-2">
+                            <span>
+                              {item.title}{" "}
+                              <span className="text-brand-300">/ {item.maxScore}</span>
+                            </span>
+                            <button
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="text-brand-300 hover:text-white"
+                              aria-label="Delete item"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </th>
+                      ))
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-100">
@@ -252,20 +260,24 @@ export function GradeEntryEditor() {
                       <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium text-brand-900">
                         {student.name}
                       </td>
-                      {items.map((item) => (
-                        <td key={item.id} className="px-3 py-2">
-                          <input
-                            type="number"
-                            min={0}
-                            max={item.maxScore}
-                            defaultValue={item.scores[student.id] ?? ""}
-                            onBlur={(e) =>
-                              handleScoreChange(student.id, item.id, e.target.value)
-                            }
-                            className="w-20 rounded-md border border-brand-300 px-2 py-1 text-sm focus:border-brand-600 focus:outline-none"
-                          />
-                        </td>
-                      ))}
+                      {items.length === 0 ? (
+                        <td className="px-3 py-2 text-brand-300">—</td>
+                      ) : (
+                        items.map((item) => (
+                          <td key={item.id} className="px-3 py-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={item.maxScore}
+                              defaultValue={item.scores[student.id] ?? ""}
+                              onBlur={(e) =>
+                                handleScoreChange(student.id, item.id, e.target.value)
+                              }
+                              className="w-20 rounded-md border border-brand-300 px-2 py-1 text-sm focus:border-brand-600 focus:outline-none"
+                            />
+                          </td>
+                        ))
+                      )}
                     </tr>
                   ))}
                 </tbody>
