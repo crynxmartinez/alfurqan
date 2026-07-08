@@ -394,7 +394,7 @@ export function GradeLookup() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+            className="max-h-[85vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
           >
             {modalLoading && (
               <p className="py-10 text-center text-brand-500">Loading...</p>
@@ -420,57 +420,22 @@ export function GradeLookup() {
                   </button>
                 </div>
 
-                {groupBySubjectFilter(modalCard).map((subject) => {
-                  const grouped = (["QUIZ", "ASSIGNMENT", "OTHERS", "EXAM"] as const).map(
-                    (component) => ({
-                      component,
-                      items: subject.items.filter((i) => i.component === component),
-                    })
-                  );
-
-                  return (
-                    <div
-                      key={subject.subjectId}
-                      className="mb-6 rounded-lg border border-brand-200 p-4"
-                    >
-                      <div className="mb-3 flex items-center justify-between">
-                        <h4 className="font-display text-base font-semibold text-brand-900">
-                          {subject.subjectName}
-                        </h4>
-                        <span className="text-sm font-bold text-brand-900">
-                          {subject.total.toFixed(2)}
-                        </span>
-                      </div>
-
-                      {grouped.map(({ component, items }) => (
-                        <div key={component} className="mb-3 last:mb-0">
-                          <h5 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-brand-500">
-                            {COMPONENT_LABELS[component]}
-                          </h5>
-                          {items.length === 0 ? (
-                            <p className="text-xs text-brand-400">No items recorded.</p>
-                          ) : (
-                            <ul className="space-y-1">
-                              {items.map((item) => (
-                                <li
-                                  key={item.id}
-                                  className="flex justify-between rounded-md bg-brand-50 px-3 py-1.5 text-sm"
-                                >
-                                  <span className="text-brand-700">
-                                    {new Date(item.date).toLocaleDateString()}
-                                  </span>
-                                  <span className="font-medium text-brand-900">
-                                    {item.score ?? "—"} / {item.maxScore}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
+                {modalCard.subjects.map((subject) => (
+                  <div
+                    key={subject.subjectId}
+                    className="mb-5 overflow-x-auto rounded-lg border border-brand-200 p-4 last:mb-0"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <h4 className="font-display text-base font-semibold text-brand-900">
+                        {subject.subjectName}
+                      </h4>
+                      <span className="text-sm font-bold text-brand-900">
+                        {subject.total.toFixed(2)}
+                      </span>
                     </div>
-                  );
-                })}
+                    <SubjectBreakdownTable subject={subject} />
+                  </div>
+                ))}
               </>
             )}
           </div>
