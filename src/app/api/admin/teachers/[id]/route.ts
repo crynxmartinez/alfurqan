@@ -18,7 +18,7 @@ export async function PATCH(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { name, email, password, employeeId } = await req.json();
+  const { name, email, password } = await req.json();
 
   const teacher = await prisma.teacher.findUnique({ where: { id } });
   if (!teacher) {
@@ -32,9 +32,8 @@ export async function PATCH(
 
   try {
     await prisma.user.update({ where: { id: teacher.userId }, data: userData });
-    const updatedTeacher = await prisma.teacher.update({
+    const updatedTeacher = await prisma.teacher.findUnique({
       where: { id },
-      data: { employeeId: employeeId ?? null },
       include: { user: { select: { id: true, name: true, email: true } } },
     });
     return NextResponse.json(updatedTeacher);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { nextSequenceId } from "@/lib/sequence";
 
 async function requireAdmin() {
   const session = await auth();
@@ -20,13 +21,12 @@ export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { studentId, name } = await req.json();
-  if (!studentId || !name) {
-    return NextResponse.json(
-      { error: "Student ID and name are required" },
-      { status: 400 }
-    );
+  const { name } = await req.json();
+  if (!name) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
+
+  const studentId = await nextSequenceId("studentId");
 
   try {
     const student = await prisma.student.create({ data: { studentId, name } });

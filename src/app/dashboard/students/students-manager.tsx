@@ -16,7 +16,6 @@ export function StudentsManager() {
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
-  const [studentId, setStudentId] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -34,7 +33,6 @@ export function StudentsManager() {
 
   function openCreate() {
     setEditing(null);
-    setStudentId("");
     setName("");
     setError(null);
     setShowForm(true);
@@ -42,7 +40,6 @@ export function StudentsManager() {
 
   function openEdit(item: Student) {
     setEditing(item);
-    setStudentId(item.studentId);
     setName(item.name);
     setError(null);
     setShowForm(true);
@@ -59,7 +56,7 @@ export function StudentsManager() {
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId, name }),
+      body: JSON.stringify({ name }),
     });
 
     setSaving(false);
@@ -179,16 +176,18 @@ export function StudentsManager() {
               </div>
             )}
 
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-              Student ID
-            </label>
-            <input
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              placeholder="e.g. S-001"
-              required
-              className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
-            />
+            {editing && (
+              <>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
+                  Student ID
+                </label>
+                <input
+                  value={editing.studentId}
+                  disabled
+                  className="mb-4 w-full rounded-md border border-brand-200 bg-brand-100 px-3 py-2 text-sm text-brand-500"
+                />
+              </>
+            )}
 
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
               Full Name

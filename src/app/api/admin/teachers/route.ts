@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { nextSequenceId } from "@/lib/sequence";
 
 async function requireAdmin() {
   const session = await auth();
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, email, password, employeeId } = await req.json();
+  const { name, email, password } = await req.json();
   if (!name || !email || !password) {
     return NextResponse.json(
       { error: "Name, email, and password are required" },
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const employeeId = await nextSequenceId("employeeId");
 
   const user = await prisma.user.create({
     data: {
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: "TEACHER",
       teacher: {
-        create: { employeeId: employeeId || null },
+        create: { employeeId },
       },
     },
     include: { teacher: true },

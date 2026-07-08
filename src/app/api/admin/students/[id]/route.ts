@@ -16,13 +16,12 @@ export async function PATCH(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { studentId, name } = await req.json();
+  const { name } = await req.json();
 
   try {
     const student = await prisma.student.update({
       where: { id },
       data: {
-        ...(studentId !== undefined ? { studentId } : {}),
         ...(name !== undefined ? { name } : {}),
       },
     });

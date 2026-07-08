@@ -18,7 +18,6 @@ export function TeachersManager() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -38,7 +37,6 @@ export function TeachersManager() {
     setName("");
     setEmail("");
     setPassword("");
-    setEmployeeId("");
     setError(null);
     setShowForm(true);
   }
@@ -48,7 +46,6 @@ export function TeachersManager() {
     setName(item.user.name);
     setEmail(item.user.email);
     setPassword("");
-    setEmployeeId(item.employeeId ?? "");
     setError(null);
     setShowForm(true);
   }
@@ -60,7 +57,7 @@ export function TeachersManager() {
 
     const url = editing ? `/api/admin/teachers/${editing.id}` : "/api/admin/teachers";
     const method = editing ? "PATCH" : "POST";
-    const body: Record<string, unknown> = { name, email, employeeId };
+    const body: Record<string, unknown> = { name, email };
     if (!editing || password) body.password = password;
 
     const res = await fetch(url, {
@@ -213,15 +210,18 @@ export function TeachersManager() {
               className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
             />
 
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-              Employee ID (optional)
-            </label>
-            <input
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              placeholder="e.g. T-001"
-              className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
-            />
+            {editing && (
+              <>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
+                  Employee ID
+                </label>
+                <input
+                  value={editing.employeeId ?? ""}
+                  disabled
+                  className="mb-4 w-full rounded-md border border-brand-200 bg-brand-100 px-3 py-2 text-sm text-brand-500"
+                />
+              </>
+            )}
 
             <div className="flex justify-end gap-2">
               <button

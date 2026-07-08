@@ -13,6 +13,13 @@ enum Role {
   TEACHER
 }
 
+// Tracks ever-increasing sequence counters (e.g. "employeeId", "studentId")
+// used to auto-generate IDs. Values never decrease, even if records are deleted.
+model Counter {
+  name  String @id
+  value Int    @default(0)
+}
+
 enum GradeComponent {
   QUIZ
   ASSIGNMENT
