@@ -38,7 +38,7 @@ export function DashboardSidebar({
   const items = role === "ADMIN" ? ADMIN_NAV : TEACHER_NAV;
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-brand-200 bg-brand-950 text-white">
+    <aside className="flex h-full min-h-screen w-64 flex-col border-r border-brand-200 bg-brand-950 text-white">
       <div className="flex items-center gap-3 border-b border-brand-800 px-6 py-5">
         <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-brand-700 bg-brand-900">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
