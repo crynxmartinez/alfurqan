@@ -15,7 +15,7 @@ export function DashboardShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-brand-50">
+    <div className="min-h-screen bg-brand-50">
       {/* Mobile top bar */}
       <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-brand-200 bg-white px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2">
@@ -49,16 +49,16 @@ export function DashboardShell({
         />
       )}
 
-      {/* Sidebar: static on desktop, sliding drawer on mobile */}
+      {/* Sidebar: fixed to viewport on all breakpoints, sliding drawer on mobile */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <DashboardSidebar role={role} name={name} onNavigate={() => setOpen(false)} />
       </div>
 
-      <main className="flex-1 overflow-y-auto px-4 py-6 pt-20 sm:px-6 lg:px-8 lg:py-8 lg:pt-8">
+      <main className="px-4 py-6 pt-20 sm:px-6 lg:ml-64 lg:px-8 lg:py-8 lg:pt-8">
         {children}
       </main>
     </div>
