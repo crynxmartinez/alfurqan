@@ -102,6 +102,7 @@ export function GradeEntryEditor() {
   const [newDate, setNewDate] = useState("");
   const [newMaxScore, setNewMaxScore] = useState("100");
   const [saving, setSaving] = useState(false);
+  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!subjectId) {
@@ -323,9 +324,17 @@ export function GradeEntryEditor() {
             <tbody className="divide-y divide-brand-100">
               {data.students.map((student) => {
                 const total = computeStudentTotal(data.gradeItems, student.id);
+                const isActive = activeStudentId === student.id;
                 return (
-                  <tr key={student.id}>
-                    <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium text-brand-900">
+                  <tr
+                    key={student.id}
+                    className={`transition-colors ${isActive ? "bg-amber-50" : ""}`}
+                  >
+                    <td
+                      className={`sticky left-0 z-10 px-4 py-2 font-medium text-brand-900 transition-colors ${
+                        isActive ? "bg-amber-50" : "bg-white"
+                      }`}
+                    >
                       {student.name}
                     </td>
                     {componentGroups.map(({ component, items }) =>
@@ -340,9 +349,11 @@ export function GradeEntryEditor() {
                               min={0}
                               max={item.maxScore}
                               defaultValue={item.scores[student.id] ?? ""}
-                              onBlur={(e) =>
-                                handleScoreChange(student.id, item.id, e.target.value)
-                              }
+                              onFocus={() => setActiveStudentId(student.id)}
+                              onBlur={(e) => {
+                                setActiveStudentId(null);
+                                handleScoreChange(student.id, item.id, e.target.value);
+                              }}
                               className="mx-auto w-14 rounded-md border border-brand-300 px-2 py-1 text-center text-sm focus:border-brand-600 focus:outline-none"
                             />
                           </td>
