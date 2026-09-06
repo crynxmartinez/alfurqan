@@ -6,10 +6,10 @@ export default async function SchoolYearsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-brand-900">
+      <h1 className="font-display text-2xl font-bold text-brand-900 dark:text-white">
         School Years
       </h1>
-      <p className="mt-1 text-sm text-brand-500">
+      <p className="mt-1 text-sm text-brand-500 dark:text-brand-400">
         Manage school years. Only one school year can be active at a time.
       </p>
 

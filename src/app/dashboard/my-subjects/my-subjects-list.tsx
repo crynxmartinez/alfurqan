@@ -22,12 +22,12 @@ export function MySubjectsList() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-brand-500">Loading...</p>;
+    return <p className="text-sm text-brand-500 dark:text-brand-400">Loading...</p>;
   }
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-brand-500">
+      <p className="text-sm text-brand-500 dark:text-brand-400">
         You have no subjects assigned yet. Contact your admin to get
         assigned to a subject.
       </p>
@@ -40,16 +40,16 @@ export function MySubjectsList() {
         <Link
           key={item.id}
           href={`/dashboard/grade-entry?subjectId=${item.id}`}
-          className="rounded-xl border border-brand-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+          className="rounded-xl border border-brand-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-brand-800 dark:bg-brand-900 dark:hover:bg-brand-800"
         >
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 dark:text-brand-400">
             {item.section.schoolYear.label}
           </p>
-          <h3 className="mt-1 font-display text-lg font-semibold text-brand-900">
+          <h3 className="mt-1 font-display text-lg font-semibold text-brand-900 dark:text-white">
             {item.name}
           </h3>
-          <p className="mt-1 text-sm text-brand-600">{item.section.name}</p>
-          <p className="mt-3 text-xs text-brand-400">
+          <p className="mt-1 text-sm text-brand-600 dark:text-brand-400">{item.section.name}</p>
+          <p className="mt-3 text-xs text-brand-400 dark:text-brand-500">
             {item._count.gradeItems} grade item
             {item._count.gradeItems === 1 ? "" : "s"}
           </p>

@@ -6,10 +6,10 @@ export default async function TeachersPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-brand-900">
+      <h1 className="font-display text-2xl font-bold text-brand-900 dark:text-white">
         Teachers
       </h1>
-      <p className="mt-1 text-sm text-brand-500">
+      <p className="mt-1 text-sm text-brand-500 dark:text-brand-400">
         Manage teacher accounts. Each teacher can log in and manage grades for
         their assigned subjects.
       </p>
