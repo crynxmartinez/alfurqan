@@ -1,6 +1,9 @@
+import { requireAdminPage } from "@/lib/require-admin-page";
 import { TeachersManager } from "./teachers-manager";
 
-export default function TeachersPage() {
+export default async function TeachersPage() {
+  await requireAdminPage();
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-brand-900">

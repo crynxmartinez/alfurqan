@@ -1,6 +1,9 @@
+import { requireAdminPage } from "@/lib/require-admin-page";
 import { SchoolYearsManager } from "./school-years-manager";
 
-export default function SchoolYearsPage() {
+export default async function SchoolYearsPage() {
+  await requireAdminPage();
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-brand-900">

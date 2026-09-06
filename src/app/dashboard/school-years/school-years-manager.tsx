@@ -1,6 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Badge,
+  Button,
+  ErrorBanner,
+  FieldLabel,
+  Input,
+  Modal,
+  Table,
+  TableBody,
+  TableEmptyRow,
+  TableHead,
+  Td,
+  Th,
+} from "@/components/ui";
 
 interface SchoolYear {
   id: string;
@@ -92,108 +106,63 @@ export function SchoolYearsManager() {
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
-        >
-          + Add School Year
-        </button>
+        <Button onClick={openCreate}>+ Add School Year</Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-brand-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-brand-900 text-white">
-            <tr>
-              <th className="px-5 py-3 font-medium">Label</th>
-              <th className="px-5 py-3 font-medium">Status</th>
-              <th className="px-5 py-3 font-medium">Sections</th>
-              <th className="px-5 py-3 text-right font-medium">Actions</th>
+      <Table>
+        <TableHead>
+          <Th>Label</Th>
+          <Th>Status</Th>
+          <Th>Sections</Th>
+          <Th className="text-right">Actions</Th>
+        </TableHead>
+        <TableBody>
+          {loading && <TableEmptyRow colSpan={4}>Loading...</TableEmptyRow>}
+          {!loading && items.length === 0 && (
+            <TableEmptyRow colSpan={4}>No school years yet.</TableEmptyRow>
+          )}
+          {items.map((item) => (
+            <tr key={item.id}>
+              <Td className="font-medium text-brand-900 dark:text-white">{item.label}</Td>
+              <Td>
+                {item.isActive ? (
+                  <Badge tone="success">Active</Badge>
+                ) : (
+                  <Badge>Inactive</Badge>
+                )}
+              </Td>
+              <Td>{item._count.sections}</Td>
+              <Td className="text-right">
+                <Button variant="link" className="mr-3" onClick={() => openEdit(item)}>
+                  Edit
+                </Button>
+                <Button variant="link-danger" onClick={() => handleDelete(item)}>
+                  Delete
+                </Button>
+              </Td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-brand-100">
-            {loading && (
-              <tr>
-                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
-                  Loading...
-                </td>
-              </tr>
-            )}
-            {!loading && items.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
-                  No school years yet.
-                </td>
-              </tr>
-            )}
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td className="px-5 py-3 font-medium text-brand-900">
-                  {item.label}
-                </td>
-                <td className="px-5 py-3">
-                  {item.isActive ? (
-                    <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                      Active
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-500">
-                      Inactive
-                    </span>
-                  )}
-                </td>
-                <td className="px-5 py-3 text-brand-600">{item._count.sections}</td>
-                <td className="px-5 py-3 text-right">
-                  <button
-                    onClick={() => openEdit(item)}
-                    className="mr-3 text-sm font-medium text-brand-700 hover:underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="text-sm font-medium text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </TableBody>
+      </Table>
 
       {showForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          onClick={() => setShowForm(false)}
+        <Modal
+          onClose={() => setShowForm(false)}
+          title={editing ? "Edit School Year" : "Add School Year"}
         >
-          <form
-            onSubmit={handleSubmit}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-          >
-            <h3 className="mb-4 font-display text-lg font-semibold text-brand-900">
-              {editing ? "Edit School Year" : "Add School Year"}
-            </h3>
+          <form onSubmit={handleSubmit}>
+            {error && <ErrorBanner>{error}</ErrorBanner>}
 
-            {error && (
-              <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-              Label
-            </label>
-            <input
+            <FieldLabel>Label</FieldLabel>
+            <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. 2025-2026"
               required
-              className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+              className="mb-4"
             />
 
-            <label className="mb-4 flex items-center gap-2 text-sm text-brand-700">
+            <label className="mb-4 flex items-center gap-2 text-sm text-brand-700 dark:text-brand-300">
               <input
                 type="checkbox"
                 checked={isActive}
@@ -204,23 +173,15 @@ export function SchoolYearsManager() {
             </label>
 
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="rounded-md border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
-              >
+              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
-              >
+              </Button>
+              <Button type="submit" disabled={saving}>
                 {saving ? "Saving..." : "Save"}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

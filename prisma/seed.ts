@@ -94,17 +94,17 @@ async function main() {
   }
 
   // Grade items
-  const gradeItemsData: { title: string; component: GradeComponent; maxScore: number }[] = [
-    { title: "Quiz 1", component: "QUIZ", maxScore: 10 },
-    { title: "Quiz 2", component: "QUIZ", maxScore: 10 },
-    { title: "Assignment 1", component: "ASSIGNMENT", maxScore: 20 },
-    { title: "Midterm Exam", component: "EXAM", maxScore: 100 },
+  const gradeItemsData: { date: Date; component: GradeComponent; maxScore: number }[] = [
+    { date: new Date("2025-09-08"), component: "QUIZ", maxScore: 10 },
+    { date: new Date("2025-09-22"), component: "QUIZ", maxScore: 10 },
+    { date: new Date("2025-09-15"), component: "ASSIGNMENT", maxScore: 20 },
+    { date: new Date("2025-10-06"), component: "EXAM", maxScore: 100 },
   ];
 
   const gradeItems = [];
   for (const gi of gradeItemsData) {
     const existing = await prisma.gradeItem.findFirst({
-      where: { subjectId: subject.id, title: gi.title },
+      where: { subjectId: subject.id, component: gi.component, date: gi.date },
     });
     const item =
       existing ??

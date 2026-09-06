@@ -15,12 +15,44 @@
   --color-brand-800: #3d3e47;
   --color-brand-900: #36373e;
   --color-brand-950: #232429;
+
+  /* Accent: a deep teal, echoing the geometric-tile motif used across the site. */
+  --color-accent-50: #effcfa;
+  --color-accent-100: #d6f5f0;
+  --color-accent-200: #aeeae1;
+  --color-accent-300: #79d9cc;
+  --color-accent-400: #43bfb0;
+  --color-accent-500: #269e91;
+  --color-accent-600: #1c7f75;
+  --color-accent-700: #1a655e;
+  --color-accent-800: #1a514c;
+  --color-accent-900: #194441;
+  --color-accent-950: #092726;
+
+  --color-success-50: #f0fdf4;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
 }
 
 body {
   background-color: white;
   color: var(--color-brand-900);
   -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: var(--color-brand-950);
+    color: var(--color-brand-100);
+  }
 }
 
 @utility bg-geo-pattern {
@@ -31,4 +63,11 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cg fill='none' stroke='%23b8bac1' stroke-width='1'%3E%3Cpath d='M0 20 L20 0 L40 20 L60 0 L80 20 L60 40 L40 20 L20 40 Z'/%3E%3C/g%3E%3C/svg%3E");
   background-repeat: repeat-x;
   height: 40px;
+}
+
+@media print {
+  body {
+    background-color: white;
+    color: black;
+  }
 }

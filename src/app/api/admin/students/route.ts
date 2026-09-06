@@ -10,6 +10,9 @@ async function requireAdmin() {
 }
 
 export async function GET() {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const students = await prisma.student.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { enrollments: true } } },

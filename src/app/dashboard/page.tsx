@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Card } from "@/components/ui";
 
 async function getAdminOverview() {
   const activeYear = await prisma.schoolYear.findFirst({
@@ -39,10 +41,10 @@ export default async function DashboardHomePage() {
   if (role !== "ADMIN") {
     return (
       <div>
-        <h1 className="font-display text-2xl font-bold text-brand-900">
+        <h1 className="font-display text-2xl font-bold text-brand-900 dark:text-white">
           Welcome back{session?.user.name ? `, ${session.user.name}` : ""}
         </h1>
-        <p className="mt-1 text-sm text-brand-500">
+        <p className="mt-1 text-sm text-brand-500 dark:text-brand-400">
           Manage your subjects and enter grades from the menu on the left.
         </p>
       </div>
@@ -88,10 +90,10 @@ export default async function DashboardHomePage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-brand-900">
+      <h1 className="font-display text-2xl font-bold text-brand-900 dark:text-white">
         Welcome back{session?.user.name ? `, ${session.user.name}` : ""}
       </h1>
-      <p className="mt-1 text-sm text-brand-500">
+      <p className="mt-1 text-sm text-brand-500 dark:text-brand-400">
         Manage school years, sections, subjects, teachers, and students from the menu on the left.
       </p>
 
@@ -100,18 +102,18 @@ export default async function DashboardHomePage() {
           <Link
             key={s.label}
             href={s.href}
-            className="rounded-xl border border-brand-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+            className="rounded-xl border border-brand-200 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-brand-800 dark:bg-brand-900 dark:hover:bg-brand-800"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 dark:text-brand-400">
               {s.label}
             </p>
-            <p className="mt-2 text-xl font-bold text-brand-900">{s.value}</p>
+            <p className="mt-2 text-xl font-bold text-brand-900 dark:text-white">{s.value}</p>
           </Link>
         ))}
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-3 font-display text-lg font-semibold text-brand-900">
+        <h2 className="mb-3 font-display text-lg font-semibold text-brand-900 dark:text-white">
           Quick Actions
         </h2>
         <div className="flex flex-wrap gap-3">
@@ -119,7 +121,7 @@ export default async function DashboardHomePage() {
             <Link
               key={a.label}
               href={a.href}
-              className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
+              className="rounded-md bg-accent-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-800 dark:bg-accent-600 dark:hover:bg-accent-500"
             >
               {a.label}
             </Link>
@@ -128,8 +130,8 @@ export default async function DashboardHomePage() {
       </div>
 
       {setupIncomplete && (
-        <div className="mt-8 rounded-xl border border-brand-200 bg-brand-50 p-6">
-          <h2 className="mb-3 font-display text-lg font-semibold text-brand-900">
+        <Card className="mt-8 p-6">
+          <h2 className="mb-3 font-display text-lg font-semibold text-brand-900 dark:text-white">
             Getting Started
           </h2>
           <ul className="space-y-2">
@@ -138,23 +140,28 @@ export default async function DashboardHomePage() {
                 <span
                   className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                     c.done
-                      ? "bg-green-600 text-white"
-                      : "bg-white text-brand-500 border border-brand-300"
+                      ? "bg-success-600 text-white"
+                      : "border border-brand-300 bg-white text-brand-500 dark:border-brand-600 dark:bg-brand-800 dark:text-brand-300"
                   }`}
                 >
-                  {c.done ? "✓" : i + 1}
+                  {c.done ? <Check className="h-3.5 w-3.5" /> : i + 1}
                 </span>
                 {c.done ? (
-                  <span className="text-sm text-brand-400 line-through">{c.label}</span>
+                  <span className="text-sm text-brand-400 line-through dark:text-brand-500">
+                    {c.label}
+                  </span>
                 ) : (
-                  <Link href={c.href} className="text-sm font-medium text-brand-800 hover:underline">
+                  <Link
+                    href={c.href}
+                    className="text-sm font-medium text-brand-800 hover:underline dark:text-brand-200"
+                  >
                     {c.label}
                   </Link>
                 )}
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
     </div>
   );

@@ -9,6 +9,9 @@ async function requireAdmin() {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const schoolYearId = req.nextUrl.searchParams.get("schoolYearId");
   const sections = await prisma.section.findMany({
     where: schoolYearId ? { schoolYearId } : undefined,

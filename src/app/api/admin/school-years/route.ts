@@ -11,6 +11,11 @@ async function requireAdmin() {
 }
 
 export async function GET() {
+  const session = await requireAdmin();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const schoolYears = await prisma.schoolYear.findMany({
     orderBy: { label: "desc" },
     include: { _count: { select: { sections: true } } },

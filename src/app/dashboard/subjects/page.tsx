@@ -1,6 +1,9 @@
+import { requireAdminPage } from "@/lib/require-admin-page";
 import { SubjectsManager } from "./subjects-manager";
 
-export default function SubjectsPage() {
+export default async function SubjectsPage() {
+  await requireAdminPage();
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-brand-900">

@@ -1,6 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Button,
+  ErrorBanner,
+  FieldLabel,
+  Input,
+  Modal,
+  Table,
+  TableBody,
+  TableEmptyRow,
+  TableHead,
+  Td,
+  Th,
+} from "@/components/ui";
 
 interface Teacher {
   id: string;
@@ -12,6 +25,7 @@ interface Teacher {
 export function TeachersManager() {
   const [items, setItems] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
@@ -23,7 +37,13 @@ export function TeachersManager() {
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     const res = await fetch("/api/admin/teachers");
+    if (!res.ok) {
+      setLoadError("Failed to load teachers.");
+      setLoading(false);
+      return;
+    }
     setItems(await res.json());
     setLoading(false);
   }
@@ -92,155 +112,88 @@ export function TeachersManager() {
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
-        >
-          + Add Teacher
-        </button>
+        <Button onClick={openCreate}>+ Add Teacher</Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-brand-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-brand-900 text-white">
-            <tr>
-              <th className="px-5 py-3 font-medium">Name</th>
-              <th className="px-5 py-3 font-medium">Email</th>
-              <th className="px-5 py-3 font-medium">Employee ID</th>
-              <th className="px-5 py-3 font-medium">Subjects</th>
-              <th className="px-5 py-3 text-right font-medium">Actions</th>
+      {loadError && <ErrorBanner>{loadError}</ErrorBanner>}
+
+      <Table>
+        <TableHead>
+          <Th>Name</Th>
+          <Th>Email</Th>
+          <Th>Employee ID</Th>
+          <Th>Subjects</Th>
+          <Th className="text-right">Actions</Th>
+        </TableHead>
+        <TableBody>
+          {loading && <TableEmptyRow colSpan={5}>Loading...</TableEmptyRow>}
+          {!loading && items.length === 0 && (
+            <TableEmptyRow colSpan={5}>No teachers yet.</TableEmptyRow>
+          )}
+          {items.map((item) => (
+            <tr key={item.id}>
+              <Td className="font-medium text-brand-900 dark:text-white">{item.user.name}</Td>
+              <Td>{item.user.email}</Td>
+              <Td>{item.employeeId ?? "—"}</Td>
+              <Td>{item._count.subjects}</Td>
+              <Td className="text-right">
+                <Button variant="link" className="mr-3" onClick={() => openEdit(item)}>
+                  Edit
+                </Button>
+                <Button variant="link-danger" onClick={() => handleDelete(item)}>
+                  Delete
+                </Button>
+              </Td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-brand-100">
-            {loading && (
-              <tr>
-                <td colSpan={5} className="px-5 py-6 text-center text-brand-500">
-                  Loading...
-                </td>
-              </tr>
-            )}
-            {!loading && items.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-5 py-6 text-center text-brand-500">
-                  No teachers yet.
-                </td>
-              </tr>
-            )}
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td className="px-5 py-3 font-medium text-brand-900">
-                  {item.user.name}
-                </td>
-                <td className="px-5 py-3 text-brand-600">{item.user.email}</td>
-                <td className="px-5 py-3 text-brand-600">
-                  {item.employeeId ?? "—"}
-                </td>
-                <td className="px-5 py-3 text-brand-600">
-                  {item._count.subjects}
-                </td>
-                <td className="px-5 py-3 text-right">
-                  <button
-                    onClick={() => openEdit(item)}
-                    className="mr-3 text-sm font-medium text-brand-700 hover:underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="text-sm font-medium text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </TableBody>
+      </Table>
 
       {showForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          onClick={() => setShowForm(false)}
-        >
-          <form
-            onSubmit={handleSubmit}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-          >
-            <h3 className="mb-4 font-display text-lg font-semibold text-brand-900">
-              {editing ? "Edit Teacher" : "Add Teacher"}
-            </h3>
+        <Modal onClose={() => setShowForm(false)} title={editing ? "Edit Teacher" : "Add Teacher"}>
+          <form onSubmit={handleSubmit}>
+            {error && <ErrorBanner>{error}</ErrorBanner>}
 
-            {error && (
-              <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+            <FieldLabel>Full Name</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required className="mb-4" />
 
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-              Full Name
-            </label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
-            />
-
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-              Email
-            </label>
-            <input
+            <FieldLabel>Email</FieldLabel>
+            <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+              className="mb-4"
             />
 
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
+            <FieldLabel>
               {editing ? "New Password (leave blank to keep current)" : "Password"}
-            </label>
-            <input
+            </FieldLabel>
+            <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required={!editing}
-              className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+              className="mb-4"
             />
 
             {editing && (
               <>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-                  Employee ID
-                </label>
-                <input
-                  value={editing.employeeId ?? ""}
-                  disabled
-                  className="mb-4 w-full rounded-md border border-brand-200 bg-brand-100 px-3 py-2 text-sm text-brand-500"
-                />
+                <FieldLabel>Employee ID</FieldLabel>
+                <Input value={editing.employeeId ?? ""} disabled className="mb-4" />
               </>
             )}
 
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="rounded-md border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
-              >
+              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
-              >
+              </Button>
+              <Button type="submit" disabled={saving}>
                 {saving ? "Saving..." : "Save"}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -1,6 +1,9 @@
+import { requireAdminPage } from "@/lib/require-admin-page";
 import { EnrollmentsManager } from "./enrollments-manager";
 
-export default function EnrollmentsPage() {
+export default async function EnrollmentsPage() {
+  await requireAdminPage();
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-brand-900">

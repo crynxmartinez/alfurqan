@@ -4,7 +4,7 @@ import { GradeLookup } from "./grade-lookup";
 
 export default function GradesPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-white dark:bg-brand-950">
       <SiteNavbar />
 
       <section className="relative overflow-hidden bg-brand-900 py-16">

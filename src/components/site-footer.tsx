@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-brand-200 bg-brand-950 text-brand-200">
@@ -19,19 +21,19 @@ export function SiteFooter() {
             </h4>
             <ul className="mt-3 space-y-2 text-sm text-brand-300">
               <li>
-                <a href="/" className="hover:text-white">
+                <Link href="/" className="hover:text-white">
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/grades" className="hover:text-white">
+                <Link href="/grades" className="hover:text-white">
                   Check Grades
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/login" className="hover:text-white">
+                <Link href="/login" className="hover:text-white">
                   Staff Login
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

@@ -1,6 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Button,
+  Card,
+  ErrorBanner,
+  FieldLabel,
+  Select,
+  Table,
+  TableBody,
+  TableEmptyRow,
+  TableHead,
+  Td,
+  Th,
+} from "@/components/ui";
 
 interface SchoolYearOption {
   id: string;
@@ -112,33 +125,24 @@ export function EnrollmentsManager() {
 
   return (
     <div>
-      <div className="mb-6 grid gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6 md:grid-cols-2">
+      <Card className="mb-6 grid gap-4 p-6 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-            School Year
-          </label>
-          <select
-            value={schoolYearId}
-            onChange={(e) => setSchoolYearId(e.target.value)}
-            className="w-full rounded-md border border-brand-300 bg-white px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
-          >
+          <FieldLabel>School Year</FieldLabel>
+          <Select value={schoolYearId} onChange={(e) => setSchoolYearId(e.target.value)}>
             <option value="">Select year</option>
             {schoolYears.map((sy) => (
               <option key={sy.id} value={sy.id}>
                 {sy.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-            Grade / Section
-          </label>
-          <select
+          <FieldLabel>Grade / Section</FieldLabel>
+          <Select
             value={sectionId}
             onChange={(e) => setSectionId(e.target.value)}
             disabled={!schoolYearId}
-            className="w-full rounded-md border border-brand-300 bg-white px-3 py-2 text-sm focus:border-brand-600 focus:outline-none disabled:bg-brand-100"
           >
             <option value="">Select section</option>
             {sections.map((s) => (
@@ -146,91 +150,57 @@ export function EnrollmentsManager() {
                 {s.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
-      </div>
+      </Card>
 
       {sectionId && (
         <>
-          <form
-            onSubmit={handleAdd}
-            className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-brand-200 bg-white p-4"
-          >
-            <div className="flex-1 min-w-[200px]">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-                Add Student
-              </label>
-              <select
-                value={addStudentId}
-                onChange={(e) => setAddStudentId(e.target.value)}
-                className="w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
-              >
-                <option value="">Select student</option>
-                {availableStudents.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.studentId})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={!addStudentId || adding}
-              className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
-            >
-              {adding ? "Adding..." : "Add"}
-            </button>
-          </form>
+          <Card className="mb-4 bg-white p-4 dark:bg-brand-900">
+            <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[200px] flex-1">
+                <FieldLabel>Add Student</FieldLabel>
+                <Select value={addStudentId} onChange={(e) => setAddStudentId(e.target.value)}>
+                  <option value="">Select student</option>
+                  {availableStudents.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.studentId})
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Button type="submit" disabled={!addStudentId || adding}>
+                {adding ? "Adding..." : "Add"}
+              </Button>
+            </form>
+          </Card>
 
-          {error && (
-            <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+          {error && <ErrorBanner>{error}</ErrorBanner>}
 
-          <div className="overflow-hidden rounded-xl border border-brand-200 bg-white">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-brand-900 text-white">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Student ID</th>
-                  <th className="px-5 py-3 font-medium">Name</th>
-                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+          <Table>
+            <TableHead>
+              <Th>Student ID</Th>
+              <Th>Name</Th>
+              <Th className="text-right">Actions</Th>
+            </TableHead>
+            <TableBody>
+              {loading && <TableEmptyRow colSpan={3}>Loading...</TableEmptyRow>}
+              {!loading && enrollments.length === 0 && (
+                <TableEmptyRow colSpan={3}>No students enrolled yet.</TableEmptyRow>
+              )}
+              {enrollments.map((e) => (
+                <tr key={e.id}>
+                  <Td>{e.student.studentId}</Td>
+                  <Td className="font-medium text-brand-900 dark:text-white">{e.student.name}</Td>
+                  <Td className="text-right">
+                    <Button variant="link-danger" onClick={() => handleRemove(e)}>
+                      Remove
+                    </Button>
+                  </Td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-100">
-                {loading && (
-                  <tr>
-                    <td colSpan={3} className="px-5 py-6 text-center text-brand-500">
-                      Loading...
-                    </td>
-                  </tr>
-                )}
-                {!loading && enrollments.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-5 py-6 text-center text-brand-500">
-                      No students enrolled yet.
-                    </td>
-                  </tr>
-                )}
-                {enrollments.map((e) => (
-                  <tr key={e.id}>
-                    <td className="px-5 py-3 text-brand-600">{e.student.studentId}</td>
-                    <td className="px-5 py-3 font-medium text-brand-900">
-                      {e.student.name}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => handleRemove(e)}
-                        className="text-sm font-medium text-red-600 hover:underline"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </>
       )}
     </div>

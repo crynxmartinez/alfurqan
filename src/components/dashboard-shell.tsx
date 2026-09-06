@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Menu, School } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 
 export function DashboardShell({
@@ -15,29 +16,23 @@ export function DashboardShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-brand-50">
+    <div className="min-h-screen bg-brand-50 dark:bg-brand-950">
       {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-brand-200 bg-white px-4 py-3 lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-brand-200 bg-white px-4 py-3 dark:border-brand-800 dark:bg-brand-900 lg:hidden">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-800 bg-brand-900 text-white">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M12 2 L21 8 L21 22 L3 22 L3 8 Z" />
-              <path d="M12 2 L12 22" />
-              <path d="M3 8 L21 8" />
-            </svg>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-800 bg-brand-900 text-white dark:border-accent-600 dark:bg-accent-700">
+            <School className="h-4 w-4" strokeWidth={1.5} />
           </span>
-          <span className="font-display text-sm font-semibold text-brand-900">
+          <span className="font-display text-sm font-semibold text-brand-900 dark:text-white">
             Al-Furqan Portal
           </span>
         </div>
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
-          className="rounded-md p-2 text-brand-700 hover:bg-brand-100"
+          className="rounded-md p-2 text-brand-700 hover:bg-brand-100 dark:text-brand-300 dark:hover:bg-brand-800"
         >
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu className="h-6 w-6" />
         </button>
       </div>
 

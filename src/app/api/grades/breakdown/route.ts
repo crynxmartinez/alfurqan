@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { computeTotalGrade, computeOverallAverage } from "@/lib/grades";
+import { getStudentReportCard } from "@/lib/report-card-data";
 
 // Full report card: every subject taught in the student's section, each
 // with its Quiz/Assignment/Exam item breakdown and subject total, plus an
@@ -16,60 +15,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const [subjectsData, student] = await Promise.all([
-    prisma.subject.findMany({
-      where: { sectionId },
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        name: true,
-        gradeItems: {
-          orderBy: [{ component: "asc" }, { date: "asc" }],
-          select: {
-            id: true,
-            date: true,
-            component: true,
-            maxScore: true,
-            entries: {
-              where: { studentId },
-              select: { score: true },
-            },
-          },
-        },
-      },
-    }),
-    prisma.student.findUnique({
-      where: { id: studentId },
-      select: { name: true, studentId: true },
-    }),
-  ]);
-
-  if (!student) {
+  const card = await getStudentReportCard(sectionId, studentId);
+  if (!card) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const subjects = subjectsData.map((subject) => {
-    const items = subject.gradeItems.map((item) => ({
-      id: item.id,
-      date: item.date,
-      component: item.component,
-      maxScore: item.maxScore,
-      score: item.entries[0]?.score ?? null,
-    }));
-
-    return {
-      subjectId: subject.id,
-      subjectName: subject.name,
-      items,
-      total: computeTotalGrade(items),
-    };
-  });
-
-  const overallAverage = computeOverallAverage(subjects.map((s) => s.total));
-
-  return NextResponse.json({
-    student,
-    subjects,
-    overallAverage,
-  });
+  return NextResponse.json(card);
 }

@@ -1,6 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  Button,
+  ErrorBanner,
+  FieldLabel,
+  Input,
+  Modal,
+  Table,
+  TableBody,
+  TableEmptyRow,
+  TableHead,
+  Td,
+  Th,
+} from "@/components/ui";
 
 interface Student {
   id: string;
@@ -12,6 +25,7 @@ interface Student {
 export function StudentsManager() {
   const [items, setItems] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const [showForm, setShowForm] = useState(false);
@@ -22,7 +36,13 @@ export function StudentsManager() {
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     const res = await fetch("/api/admin/students");
+    if (!res.ok) {
+      setLoadError("Failed to load students.");
+      setLoading(false);
+      return;
+    }
     setItems(await res.json());
     setLoading(false);
   }
@@ -91,133 +111,79 @@ export function StudentsManager() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <input
+        <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or student ID..."
-          className="w-64 rounded-md border border-brand-300 bg-white px-3 py-2 text-sm text-brand-900 focus:border-brand-600 focus:outline-none"
+          className="w-64"
         />
 
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
-        >
-          + Add Student
-        </button>
+        <Button onClick={openCreate}>+ Add Student</Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-brand-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-brand-900 text-white">
-            <tr>
-              <th className="px-5 py-3 font-medium">Student ID</th>
-              <th className="px-5 py-3 font-medium">Name</th>
-              <th className="px-5 py-3 font-medium">Enrollments</th>
-              <th className="px-5 py-3 text-right font-medium">Actions</th>
+      {loadError && <ErrorBanner>{loadError}</ErrorBanner>}
+
+      <Table>
+        <TableHead>
+          <Th>Student ID</Th>
+          <Th>Name</Th>
+          <Th>Enrollments</Th>
+          <Th className="text-right">Actions</Th>
+        </TableHead>
+        <TableBody>
+          {loading && <TableEmptyRow colSpan={4}>Loading...</TableEmptyRow>}
+          {!loading && filtered.length === 0 && (
+            <TableEmptyRow colSpan={4}>No students found.</TableEmptyRow>
+          )}
+          {filtered.map((item) => (
+            <tr key={item.id}>
+              <Td>{item.studentId}</Td>
+              <Td className="font-medium text-brand-900 dark:text-white">{item.name}</Td>
+              <Td>{item._count.enrollments}</Td>
+              <Td className="text-right">
+                <Button variant="link" className="mr-3" onClick={() => openEdit(item)}>
+                  Edit
+                </Button>
+                <Button variant="link-danger" onClick={() => handleDelete(item)}>
+                  Delete
+                </Button>
+              </Td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-brand-100">
-            {loading && (
-              <tr>
-                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
-                  Loading...
-                </td>
-              </tr>
-            )}
-            {!loading && filtered.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
-                  No students found.
-                </td>
-              </tr>
-            )}
-            {filtered.map((item) => (
-              <tr key={item.id}>
-                <td className="px-5 py-3 text-brand-600">{item.studentId}</td>
-                <td className="px-5 py-3 font-medium text-brand-900">{item.name}</td>
-                <td className="px-5 py-3 text-brand-600">{item._count.enrollments}</td>
-                <td className="px-5 py-3 text-right">
-                  <button
-                    onClick={() => openEdit(item)}
-                    className="mr-3 text-sm font-medium text-brand-700 hover:underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="text-sm font-medium text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </TableBody>
+      </Table>
 
       {showForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          onClick={() => setShowForm(false)}
-        >
-          <form
-            onSubmit={handleSubmit}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-          >
-            <h3 className="mb-4 font-display text-lg font-semibold text-brand-900">
-              {editing ? "Edit Student" : "Add Student"}
-            </h3>
-
-            {error && (
-              <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+        <Modal onClose={() => setShowForm(false)} title={editing ? "Edit Student" : "Add Student"}>
+          <form onSubmit={handleSubmit}>
+            {error && <ErrorBanner>{error}</ErrorBanner>}
 
             {editing && (
               <>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-                  Student ID
-                </label>
-                <input
-                  value={editing.studentId}
-                  disabled
-                  className="mb-4 w-full rounded-md border border-brand-200 bg-brand-100 px-3 py-2 text-sm text-brand-500"
-                />
+                <FieldLabel>Student ID</FieldLabel>
+                <Input value={editing.studentId} disabled className="mb-4" />
               </>
             )}
 
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600">
-              Full Name
-            </label>
-            <input
+            <FieldLabel>Full Name</FieldLabel>
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Ali Hassan"
               required
-              className="mb-4 w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+              className="mb-4"
             />
 
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="rounded-md border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
-              >
+              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-md bg-brand-900 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
-              >
+              </Button>
+              <Button type="submit" disabled={saving}>
                 {saving ? "Saving..." : "Save"}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

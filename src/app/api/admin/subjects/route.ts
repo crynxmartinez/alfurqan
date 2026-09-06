@@ -9,6 +9,9 @@ async function requireAdmin() {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const sectionId = req.nextUrl.searchParams.get("sectionId");
   const subjects = await prisma.subject.findMany({
     where: sectionId ? { sectionId } : undefined,

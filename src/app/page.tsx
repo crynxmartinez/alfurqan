@@ -28,7 +28,7 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-white dark:bg-brand-950">
       <SiteNavbar />
 
       {/* Hero */}
@@ -75,10 +75,10 @@ export default async function HomePage() {
 
       {/* About */}
       <section className="mx-auto max-w-5xl px-6 py-20 text-center">
-        <h2 className="font-display text-3xl font-bold text-brand-900">
+        <h2 className="font-display text-3xl font-bold text-brand-900 dark:text-white">
           About Our Madrasah
         </h2>
-        <p className="mx-auto mt-5 max-w-3xl text-brand-600">
+        <p className="mx-auto mt-5 max-w-3xl text-brand-600 dark:text-brand-400">
           Al-Furqan Madrasah is committed to providing a balanced education —
           combining Quranic and Islamic studies with a strong academic
           foundation. We believe every student deserves an environment built
@@ -87,9 +87,9 @@ export default async function HomePage() {
       </section>
 
       {/* Highlights */}
-      <section className="bg-brand-50 py-20">
+      <section className="bg-brand-50 py-20 dark:bg-brand-900/40">
         <div className="mx-auto max-w-7xl px-6">
-          <h2 className="text-center font-display text-3xl font-bold text-brand-900">
+          <h2 className="text-center font-display text-3xl font-bold text-brand-900 dark:text-white">
             Why Al-Furqan
           </h2>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
@@ -98,9 +98,9 @@ export default async function HomePage() {
               return (
                 <div
                   key={item.title}
-                  className="overflow-hidden rounded-xl border border-brand-200 bg-white shadow-sm transition hover:shadow-md"
+                  className="overflow-hidden rounded-xl border border-brand-200 bg-white shadow-sm transition hover:shadow-md dark:border-brand-800 dark:bg-brand-900"
                 >
-                  <div className="relative h-44 w-full bg-brand-200">
+                  <div className="relative h-44 w-full bg-brand-200 dark:bg-brand-800">
                     {photo && (
                       <Image
                         src={photo.src.large}
@@ -111,10 +111,10 @@ export default async function HomePage() {
                     )}
                   </div>
                   <div className="p-6">
-                    <h3 className="font-display text-lg font-semibold text-brand-900">
+                    <h3 className="font-display text-lg font-semibold text-brand-900 dark:text-white">
                       {item.title}
                     </h3>
-                    <p className="mt-2 text-sm text-brand-600">{item.desc}</p>
+                    <p className="mt-2 text-sm text-brand-600 dark:text-brand-400">{item.desc}</p>
                   </div>
                 </div>
               );

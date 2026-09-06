@@ -4,8 +4,16 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = "admin@mahadalfurqan.com";
-  const password = "admin123";
+  const email = process.env.ADMIN_EMAIL ?? process.argv[2];
+  const password = process.env.ADMIN_PASSWORD ?? process.argv[3];
+
+  if (!email || !password) {
+    console.error(
+      "Usage: ADMIN_EMAIL=... ADMIN_PASSWORD=... npx tsx scripts/debug-login.ts\n" +
+        "   or: npx tsx scripts/debug-login.ts <email> <password>"
+    );
+    process.exit(1);
+  }
 
   const user = await prisma.user.findUnique({ where: { email } });
   console.log("User found:", !!user);

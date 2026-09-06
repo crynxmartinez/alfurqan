@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { computeTotalGrade } from "@/lib/grade-math";
 
 type Component = "QUIZ" | "ASSIGNMENT" | "OTHERS" | "EXAM";
 
@@ -36,16 +37,7 @@ interface GradeEntryData {
   gradeItems: GradeItem[];
 }
 
-// Kept in sync with src/lib/grades.ts (not imported directly since that
-// module pulls in @prisma/client, which shouldn't be bundled client-side).
 const COMPONENT_ORDER: Component[] = ["QUIZ", "ASSIGNMENT", "OTHERS", "EXAM"];
-
-const COMPONENT_WEIGHTS: Record<Component, number> = {
-  QUIZ: 0.2,
-  ASSIGNMENT: 0.1,
-  OTHERS: 0.1,
-  EXAM: 0.6,
-};
 
 const COMPONENT_LABELS: Record<Component, string> = {
   QUIZ: "Quiz (20%)",
@@ -60,33 +52,18 @@ function formatDate(iso: string): string {
 }
 
 function computeStudentTotal(gradeItems: GradeItem[], studentId: string): number | null {
-  const byComponent: Record<Component, { earned: number; max: number }> = {
-    QUIZ: { earned: 0, max: 0 },
-    ASSIGNMENT: { earned: 0, max: 0 },
-    OTHERS: { earned: 0, max: 0 },
-    EXAM: { earned: 0, max: 0 },
-  };
+  const hasAnyScore = gradeItems.some((item) => item.scores[studentId] != null);
+  if (!hasAnyScore) return null;
 
-  for (const item of gradeItems) {
-    const score = item.scores[studentId];
-    if (score == null) continue;
-    byComponent[item.component].earned += score;
-    byComponent[item.component].max += item.maxScore;
-  }
-
-  let weightedSum = 0;
-  let totalWeight = 0;
-
-  for (const component of COMPONENT_ORDER) {
-    const { earned, max } = byComponent[component];
-    if (max <= 0) continue;
-    const percentage = (earned / max) * 100;
-    weightedSum += percentage * COMPONENT_WEIGHTS[component];
-    totalWeight += COMPONENT_WEIGHTS[component];
-  }
-
-  if (totalWeight === 0) return null;
-  return Math.round((weightedSum / totalWeight) * 100) / 100;
+  return computeTotalGrade(
+    gradeItems.map((item) => ({
+      id: item.id,
+      date: item.date,
+      component: item.component,
+      maxScore: item.maxScore,
+      score: item.scores[studentId] ?? null,
+    }))
+  );
 }
 
 export function GradeEntryEditor() {
@@ -239,12 +216,22 @@ export function GradeEntryEditor() {
           </h2>
           <p className="text-xs text-brand-500">{data.subject.schoolYear.label}</p>
         </div>
-        <button
-          onClick={() => router.push("/dashboard/grade-entry")}
-          className="text-sm font-medium text-brand-700 hover:underline"
-        >
-          &larr; Choose another subject
-        </button>
+        <div className="flex items-center gap-4">
+          <a
+            href={`/dashboard/grade-entry/${data.subject.id}/print`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-brand-700 hover:underline"
+          >
+            Export / Print
+          </a>
+          <button
+            onClick={() => router.push("/dashboard/grade-entry")}
+            className="text-sm font-medium text-brand-700 hover:underline"
+          >
+            &larr; Choose another subject
+          </button>
+        </div>
       </div>
 
       {data.students.length === 0 ? (

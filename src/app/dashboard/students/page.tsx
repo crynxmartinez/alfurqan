@@ -1,6 +1,9 @@
+import { requireAdminPage } from "@/lib/require-admin-page";
 import { StudentsManager } from "./students-manager";
 
-export default function StudentsPage() {
+export default async function StudentsPage() {
+  await requireAdminPage();
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-brand-900">

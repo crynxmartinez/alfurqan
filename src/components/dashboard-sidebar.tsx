@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { School } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -38,14 +39,10 @@ export function DashboardSidebar({
   const items = role === "ADMIN" ? ADMIN_NAV : TEACHER_NAV;
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-brand-200 bg-brand-950 text-white">
+    <aside className="flex h-screen w-64 flex-col border-r border-brand-200 bg-brand-950 text-white dark:border-brand-800">
       <div className="flex items-center gap-3 border-b border-brand-800 px-6 py-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-brand-700 bg-brand-900">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M12 2 L21 8 L21 22 L3 22 L3 8 Z" />
-            <path d="M12 2 L12 22" />
-            <path d="M3 8 L21 8" />
-          </svg>
+        <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-accent-600 bg-accent-700">
+          <School className="h-5 w-5" strokeWidth={1.5} />
         </span>
         <div>
           <p className="font-display text-sm font-semibold leading-tight">
@@ -65,9 +62,10 @@ export function DashboardSidebar({
               key={item.href}
               href={item.href}
               onClick={onNavigate}
-              className={`block rounded-md px-4 py-2.5 text-sm font-medium transition ${
+              aria-current={active ? "page" : undefined}
+              className={`block rounded-md px-4 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-accent-400 ${
                 active
-                  ? "bg-white text-brand-950"
+                  ? "bg-accent-700 text-white"
                   : "text-brand-200 hover:bg-brand-900 hover:text-white"
               }`}
             >
