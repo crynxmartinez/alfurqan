@@ -12,9 +12,14 @@ interface ModalProps {
 export function Modal({ onClose, title, children, maxWidth = "max-w-sm" }: ModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Runs once on mount only — must not depend on onClose (a new function
+  // identity every parent render), or refocusing the panel on every
+  // keystroke would steal focus away from whatever field is being typed in.
   useEffect(() => {
     containerRef.current?.focus();
+  }, []);
 
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
