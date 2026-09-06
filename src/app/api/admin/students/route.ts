@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/require-staff";
 import { nextSequenceId } from "@/lib/sequence";
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
-
 export async function GET() {
-  const session = await requireAdmin();
+  const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const students = await prisma.student.findMany({
@@ -21,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireStaff();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { name } = await req.json();

@@ -27,10 +27,17 @@ export function MySubjectsList() {
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-brand-500 dark:text-brand-400">
-        You have no subjects assigned yet. Contact your admin to get
-        assigned to a subject.
-      </p>
+      <div>
+        <p className="mb-3 text-sm text-brand-500 dark:text-brand-400">
+          You have no subjects assigned yet.
+        </p>
+        <Link
+          href="/dashboard/subjects"
+          className="rounded-md bg-accent-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-800 dark:bg-accent-600 dark:hover:bg-accent-500"
+        >
+          Go to Subjects
+        </Link>
+      </div>
     );
   }
 

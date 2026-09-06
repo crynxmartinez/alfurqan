@@ -1,8 +1,8 @@
-import { requireAdminPage } from "@/lib/require-admin-page";
+import { requireStaffPage } from "@/lib/require-admin-page";
 import { SectionsManager } from "./sections-manager";
 
 export default async function SectionsPage() {
-  await requireAdminPage();
+  await requireStaffPage();
 
   return (
     <div>

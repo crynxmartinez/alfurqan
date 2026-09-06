@@ -9,6 +9,9 @@ import {
   SubjectBreakdownTable,
   type ReportCardData,
 } from "@/components/report-card";
+import { ClassGradebookGrid } from "@/components/class-gradebook-grid";
+import { PrintButton } from "@/components/print-button";
+import type { ClassGradeSheetData } from "@/lib/class-grade-sheet-data";
 
 interface Option {
   id: string;
@@ -34,6 +37,9 @@ export function GradeLookup() {
 
   const [rows, setRows] = useState<GradeRow[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [classSheet, setClassSheet] = useState<ClassGradeSheetData | null>(null);
+  const [classSheetLoading, setClassSheetLoading] = useState(false);
 
   const [reportCards, setReportCards] = useState<Record<string, ReportCardData>>({});
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
@@ -77,22 +83,31 @@ export function GradeLookup() {
       .catch(() => setSubjects([]));
   }, [sectionId]);
 
-  // Load grades when section or subject changes
+  // No subject selected: load the simple name+overall-average list.
   useEffect(() => {
     setRows([]);
     setReportCards({});
     setExpandedStudentId(null);
-    if (!sectionId) return;
+    if (!sectionId || subjectId) return;
     setLoading(true);
-    const url = subjectId
-      ? `/api/grades?sectionId=${sectionId}&subjectId=${subjectId}`
-      : `/api/grades?sectionId=${sectionId}`;
-    fetch(url)
+    fetch(`/api/grades?sectionId=${sectionId}`)
       .then((r) => r.json())
       .then(setRows)
       .catch(() => setRows([]))
       .finally(() => setLoading(false));
   }, [sectionId, subjectId]);
+
+  // Subject selected: load the full whole-class gradebook grid.
+  useEffect(() => {
+    setClassSheet(null);
+    if (!subjectId) return;
+    setClassSheetLoading(true);
+    fetch(`/api/grades/class-sheet?subjectId=${subjectId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setClassSheet)
+      .catch(() => setClassSheet(null))
+      .finally(() => setClassSheetLoading(false));
+  }, [subjectId]);
 
   async function fetchReportCard(studentId: string): Promise<ReportCardData | null> {
     if (reportCards[studentId]) return reportCards[studentId];
@@ -129,15 +144,10 @@ export function GradeLookup() {
 
   const modalCard = modalStudentId ? reportCards[modalStudentId] : null;
 
-  function groupBySubjectFilter(card: ReportCardData) {
-    if (!subjectId) return card.subjects;
-    return card.subjects.filter((s) => s.subjectId === subjectId);
-  }
-
   return (
     <div>
       {/* Filters */}
-      <div className="grid gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6 dark:border-brand-800 dark:bg-brand-900/60 md:grid-cols-3">
+      <div className="grid gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6 dark:border-brand-800 dark:bg-brand-900/60 md:grid-cols-3 print:hidden">
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
             School Year
@@ -189,91 +199,126 @@ export function GradeLookup() {
         </div>
       </div>
 
-      {/* Results */}
-      <div className="mt-8">
-        <Table>
-          <TableHead>
-            <Th className="w-10"></Th>
-            <Th>Student Name</Th>
-            <Th>Student ID</Th>
-            <Th className="text-right">{subjectId ? "Grade" : "Overall Average"}</Th>
-          </TableHead>
-          <TableBody>
-            {loading && <TableEmptyRow colSpan={4}>Loading...</TableEmptyRow>}
-            {!loading && sectionId && rows.length === 0 && (
-              <TableEmptyRow colSpan={4}>No records found.</TableEmptyRow>
-            )}
-            {!loading && !sectionId && (
-              <TableEmptyRow colSpan={4}>
-                Select school year and class to view grades.
-              </TableEmptyRow>
-            )}
-            {rows.map((row) => {
-              const isExpanded = expandedStudentId === row.studentId;
-              const card = reportCards[row.studentId];
-              const isExpandLoading = expandLoadingId === row.studentId;
+      {subjectId ? (
+        /* Whole-class gradebook — a self-contained light "paper" block so
+           it reads correctly both on screen (any theme) and when printed. */
+        <div className="mt-8 rounded-xl border border-brand-200 bg-white p-6 print:rounded-none print:border-0 print:p-0">
+          {classSheetLoading && <p className="text-sm text-brand-500">Loading...</p>}
+          {!classSheetLoading && !classSheet && (
+            <p className="text-sm text-brand-500">No records found.</p>
+          )}
+          {!classSheetLoading && classSheet && (
+            <>
+              <div className="mb-4 flex items-center justify-end print:hidden">
+                <PrintButton />
+              </div>
 
-              return (
-                <Fragment key={row.studentId}>
-                  <tr className="hover:bg-brand-50 dark:hover:bg-brand-800/60">
-                    <td className="px-3 py-3 text-center">
-                      <button
-                        onClick={() => toggleExpand(row.studentId)}
-                        aria-label="Toggle details"
-                        className="rounded p-1 text-brand-500 hover:bg-brand-100 dark:text-brand-400 dark:hover:bg-brand-800"
-                      >
-                        <ChevronDown
-                          className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                        />
-                      </button>
-                    </td>
-                    <td className="px-5 py-3">
-                      <button
-                        onClick={() => openModal(row.studentId)}
-                        className="font-medium text-brand-900 hover:underline dark:text-white"
-                      >
-                        {row.name}
-                      </button>
-                    </td>
-                    <Td>{row.studentCode}</Td>
-                    <td className="px-5 py-3 text-right font-semibold text-brand-900 dark:text-white">
-                      {row.total.toFixed(2)}
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr className="bg-brand-50 dark:bg-brand-800/40">
-                      <td colSpan={4} className="px-5 py-4">
-                        {isExpandLoading && (
-                          <p className="text-sm text-brand-500 dark:text-brand-400">Loading...</p>
-                        )}
-                        {!isExpandLoading && card && (
-                          <div className="space-y-4">
-                            {groupBySubjectFilter(card).map((subject) => (
-                              <div key={subject.subjectId} className="overflow-x-auto">
-                                {!subjectId && (
+              <div className="mb-4 hidden border-b border-black pb-4 print:block">
+                <p className="font-display text-lg font-semibold text-brand-900">
+                  Al-Furqan Madrasah
+                </p>
+                <p className="text-sm text-brand-600">Class Grade Sheet</p>
+              </div>
+
+              <div className="mb-4">
+                <h2 className="font-display text-lg font-semibold text-brand-900">
+                  {classSheet.subject.name} &middot; {classSheet.subject.section.name}
+                </h2>
+                <p className="text-xs text-brand-500">
+                  {classSheet.subject.schoolYear.label} &middot; {classSheet.subject.teacherName}
+                </p>
+              </div>
+
+              <ClassGradebookGrid data={classSheet} />
+            </>
+          )}
+        </div>
+      ) : (
+        /* No subject selected — browse every student's overall average
+           across all subjects, with a per-student expand/modal/print. */
+        <div className="mt-8">
+          <Table>
+            <TableHead>
+              <Th className="w-10"></Th>
+              <Th>Student Name</Th>
+              <Th>Student ID</Th>
+              <Th className="text-right">Overall Average</Th>
+            </TableHead>
+            <TableBody>
+              {loading && <TableEmptyRow colSpan={4}>Loading...</TableEmptyRow>}
+              {!loading && sectionId && rows.length === 0 && (
+                <TableEmptyRow colSpan={4}>No records found.</TableEmptyRow>
+              )}
+              {!loading && !sectionId && (
+                <TableEmptyRow colSpan={4}>
+                  Select school year and class to view grades.
+                </TableEmptyRow>
+              )}
+              {rows.map((row) => {
+                const isExpanded = expandedStudentId === row.studentId;
+                const card = reportCards[row.studentId];
+                const isExpandLoading = expandLoadingId === row.studentId;
+
+                return (
+                  <Fragment key={row.studentId}>
+                    <tr className="hover:bg-brand-50 dark:hover:bg-brand-800/60">
+                      <td className="px-3 py-3 text-center">
+                        <button
+                          onClick={() => toggleExpand(row.studentId)}
+                          aria-label="Toggle details"
+                          className="rounded p-1 text-brand-500 hover:bg-brand-100 dark:text-brand-400 dark:hover:bg-brand-800"
+                        >
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-5 py-3">
+                        <button
+                          onClick={() => openModal(row.studentId)}
+                          className="font-medium text-brand-900 hover:underline dark:text-white"
+                        >
+                          {row.name}
+                        </button>
+                      </td>
+                      <Td>{row.studentCode}</Td>
+                      <td className="px-5 py-3 text-right font-semibold text-brand-900 dark:text-white">
+                        {row.total.toFixed(2)}
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-brand-50 dark:bg-brand-800/40">
+                        <td colSpan={4} className="px-5 py-4">
+                          {isExpandLoading && (
+                            <p className="text-sm text-brand-500 dark:text-brand-400">Loading...</p>
+                          )}
+                          {!isExpandLoading && card && (
+                            <div className="space-y-4">
+                              {card.subjects.map((subject) => (
+                                <div key={subject.subjectId} className="overflow-x-auto">
                                   <h5 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-brand-500 dark:text-brand-400">
                                     {subject.subjectName}
                                   </h5>
-                                )}
-                                <SubjectBreakdownTable subject={subject} />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                                  <SubjectBreakdownTable subject={subject} />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
-      {/* Full report card modal */}
+      {/* Full report card modal (no-subject-selected browsing only) */}
       {modalStudentId && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 print:hidden"
           onClick={() => setModalStudentId(null)}
         >
           <div

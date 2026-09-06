@@ -1,8 +1,8 @@
-import { requireAdminPage } from "@/lib/require-admin-page";
+import { requireStaffPage } from "@/lib/require-admin-page";
 import { SubjectsManager } from "./subjects-manager";
 
 export default async function SubjectsPage() {
-  await requireAdminPage();
+  await requireStaffPage();
 
   return (
     <div>

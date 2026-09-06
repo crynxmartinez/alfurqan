@@ -1,8 +1,8 @@
-import { requireAdminPage } from "@/lib/require-admin-page";
+import { requireStaffPage } from "@/lib/require-admin-page";
 import { EnrollmentsManager } from "./enrollments-manager";
 
 export default async function EnrollmentsPage() {
-  await requireAdminPage();
+  await requireStaffPage();
 
   return (
     <div>

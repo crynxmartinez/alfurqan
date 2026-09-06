@@ -21,7 +21,7 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 const TEACHER_NAV: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
+  ...ADMIN_NAV.filter((item) => item.href !== "/dashboard/teachers"),
   { href: "/dashboard/my-subjects", label: "My Subjects" },
   { href: "/dashboard/grade-entry", label: "Grade Entry" },
 ];

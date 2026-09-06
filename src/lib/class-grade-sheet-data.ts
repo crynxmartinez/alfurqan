@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { GradeComponent } from "@prisma/client";
+import { computeTotalGrade } from "@/lib/grade-math";
 
 export interface ClassGradeSheetData {
   subject: {
@@ -9,7 +10,7 @@ export interface ClassGradeSheetData {
     schoolYear: { label: string };
     teacherName: string;
   };
-  students: { id: string; studentId: string; name: string }[];
+  students: { id: string; studentId: string; name: string; total: number }[];
   gradeItems: {
     id: string;
     date: string;
@@ -19,14 +20,11 @@ export interface ClassGradeSheetData {
   }[];
 }
 
-// Shared by the teacher grade-entry API route and the printable class
-// grade-sheet page. Returns null if the subject doesn't exist or the given
-// user isn't its teacher (unless isAdmin is true).
-export async function getAuthorizedClassGradeSheet(
-  subjectId: string,
-  userId: string,
-  isAdmin: boolean
-): Promise<ClassGradeSheetData | null> {
+// Core query, no authorization — every enrolled student's scores across
+// every grade item in a subject, plus each student's precomputed total.
+// Shared by the public whole-class gradebook and (via the authorized
+// wrapper below) the teacher grade-entry API route and its printable page.
+export async function getClassGradeSheet(subjectId: string): Promise<ClassGradeSheetData | null> {
   const subject = await prisma.subject.findUnique({
     where: { id: subjectId },
     include: {
@@ -36,9 +34,6 @@ export async function getAuthorizedClassGradeSheet(
   });
 
   if (!subject) return null;
-
-  const isOwner = subject.teacher.userId === userId;
-  if (!isOwner && !isAdmin) return null;
 
   const [gradeItems, enrollments] = await Promise.all([
     prisma.gradeItem.findMany({
@@ -53,6 +48,27 @@ export async function getAuthorizedClassGradeSheet(
     }),
   ]);
 
+  const items = gradeItems.map((item) => ({
+    id: item.id,
+    date: item.date.toISOString(),
+    component: item.component,
+    maxScore: item.maxScore,
+    scores: Object.fromEntries(item.entries.map((e) => [e.studentId, e.score])),
+  }));
+
+  const students = enrollments.map(({ student }) => ({
+    ...student,
+    total: computeTotalGrade(
+      items.map((item) => ({
+        id: item.id,
+        date: item.date,
+        component: item.component,
+        maxScore: item.maxScore,
+        score: item.scores[student.id] ?? null,
+      }))
+    ),
+  }));
+
   return {
     subject: {
       id: subject.id,
@@ -61,13 +77,28 @@ export async function getAuthorizedClassGradeSheet(
       schoolYear: subject.section.schoolYear,
       teacherName: subject.teacher.user.name,
     },
-    students: enrollments.map((e) => e.student),
-    gradeItems: gradeItems.map((item) => ({
-      id: item.id,
-      date: item.date.toISOString(),
-      component: item.component,
-      maxScore: item.maxScore,
-      scores: Object.fromEntries(item.entries.map((e) => [e.studentId, e.score])),
-    })),
+    students,
+    gradeItems: items,
   };
+}
+
+// Authorized wrapper used by the teacher-facing grade-entry API route and
+// its printable class-sheet page. Returns null if the subject doesn't
+// exist or the given user isn't its teacher (unless isAdmin is true).
+export async function getAuthorizedClassGradeSheet(
+  subjectId: string,
+  userId: string,
+  isAdmin: boolean
+): Promise<ClassGradeSheetData | null> {
+  const subject = await prisma.subject.findUnique({
+    where: { id: subjectId },
+    select: { teacher: { select: { userId: true } } },
+  });
+
+  if (!subject) return null;
+
+  const isOwner = subject.teacher.userId === userId;
+  if (!isOwner && !isAdmin) return null;
+
+  return getClassGradeSheet(subjectId);
 }
