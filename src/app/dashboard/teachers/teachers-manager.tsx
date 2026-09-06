@@ -7,6 +7,7 @@ import {
   FieldLabel,
   Input,
   Modal,
+  PasswordInput,
   Table,
   TableBody,
   TableEmptyRow,
@@ -169,8 +170,7 @@ export function TeachersManager() {
             <FieldLabel>
               {editing ? "New Password (leave blank to keep current)" : "Password"}
             </FieldLabel>
-            <Input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required={!editing}
