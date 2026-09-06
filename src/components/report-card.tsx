@@ -49,7 +49,7 @@ export function SubjectBreakdownTable({ subject }: { subject: ReportCardSubject 
   }
 
   return (
-    <table className="w-full overflow-hidden rounded-lg border border-brand-200 bg-white text-left text-xs">
+    <table className="w-full overflow-hidden rounded-lg border border-brand-200 bg-white text-left text-xs text-brand-900">
       <thead className="bg-accent-800 text-white">
         <tr>
           {groups.map((g) => (
