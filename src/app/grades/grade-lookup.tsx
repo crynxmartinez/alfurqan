@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Download, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, X } from "lucide-react";
 import { Select } from "@/components/ui";
 import {
   ReportCardView,
@@ -26,6 +26,25 @@ interface GradeRow {
   total: number;
 }
 
+type SortKey = "name" | "studentCode" | "total";
+
+function SortIcon({
+  column,
+  sortKey,
+  sortDir,
+}: {
+  column: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+}) {
+  if (sortKey !== column) return null;
+  return sortDir === "asc" ? (
+    <ChevronUp className="h-3.5 w-3.5" />
+  ) : (
+    <ChevronDown className="h-3.5 w-3.5" />
+  );
+}
+
 export function GradeLookup() {
   const [schoolYears, setSchoolYears] = useState<Option[]>([]);
   const [sections, setSections] = useState<Option[]>([]);
@@ -37,6 +56,8 @@ export function GradeLookup() {
 
   const [rows, setRows] = useState<GradeRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const [classSheet, setClassSheet] = useState<ClassGradeSheetData | null>(null);
   const [classSheetLoading, setClassSheetLoading] = useState(false);
@@ -143,6 +164,23 @@ export function GradeLookup() {
   }
 
   const modalCard = modalStudentId ? reportCards[modalStudentId] : null;
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortedRows = [...rows].sort((a, b) => {
+    const cmp =
+      sortKey === "total"
+        ? a.total - b.total
+        : a[sortKey].localeCompare(b[sortKey], undefined, { numeric: true, sensitivity: "base" });
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   return (
     <div>
@@ -254,9 +292,33 @@ export function GradeLookup() {
             <thead className="bg-accent-800 text-white">
               <tr>
                 <th className="w-10 px-3 py-3 print:hidden"></th>
-                <th className="px-5 py-3 font-medium">Student Name</th>
-                <th className="px-5 py-3 font-medium">Student ID</th>
-                <th className="px-5 py-3 text-right font-medium">Overall Average</th>
+                <th className="px-5 py-3 font-medium">
+                  <button
+                    onClick={() => handleSort("name")}
+                    className="flex items-center gap-1 hover:underline print:pointer-events-none"
+                  >
+                    Student Name
+                    <SortIcon column="name" sortKey={sortKey} sortDir={sortDir} />
+                  </button>
+                </th>
+                <th className="px-5 py-3 font-medium">
+                  <button
+                    onClick={() => handleSort("studentCode")}
+                    className="flex items-center gap-1 hover:underline print:pointer-events-none"
+                  >
+                    Student ID
+                    <SortIcon column="studentCode" sortKey={sortKey} sortDir={sortDir} />
+                  </button>
+                </th>
+                <th className="px-5 py-3 text-right font-medium">
+                  <button
+                    onClick={() => handleSort("total")}
+                    className="ml-auto flex items-center gap-1 hover:underline print:pointer-events-none"
+                  >
+                    Overall Average
+                    <SortIcon column="total" sortKey={sortKey} sortDir={sortDir} />
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-100">
@@ -281,7 +343,7 @@ export function GradeLookup() {
                   </td>
                 </tr>
               )}
-              {rows.map((row) => {
+              {sortedRows.map((row) => {
                 const isExpanded = expandedStudentId === row.studentId;
                 const card = reportCards[row.studentId];
                 const isExpandLoading = expandLoadingId === row.studentId;
