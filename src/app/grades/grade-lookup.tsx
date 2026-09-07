@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Download, X } from "lucide-react";
-import { Select, Table, TableBody, TableEmptyRow, TableHead, Td, Th } from "@/components/ui";
+import { Select } from "@/components/ui";
 import {
   ReportCardView,
   SubjectBreakdownTable,
@@ -235,24 +235,51 @@ export function GradeLookup() {
         </div>
       ) : (
         /* No subject selected — browse every student's overall average
-           across all subjects, with a per-student expand/modal/print. */
-        <div className="mt-8">
-          <Table>
-            <TableHead>
-              <Th className="w-10"></Th>
-              <Th>Student Name</Th>
-              <Th>Student ID</Th>
-              <Th className="text-right">Overall Average</Th>
-            </TableHead>
-            <TableBody>
-              {loading && <TableEmptyRow colSpan={4}>Loading...</TableEmptyRow>}
+           across all subjects, with a per-student expand/modal/print.
+           Same self-contained light "paper" card as the gradebook view,
+           so this prints correctly too regardless of on-screen theme. */
+        <div className="mt-8 rounded-xl border border-brand-200 bg-white p-6 print:rounded-none print:border-0 print:p-0">
+          {sectionId && (
+            <div className="mb-4 flex items-center justify-end print:hidden">
+              <PrintButton />
+            </div>
+          )}
+
+          <div className="mb-4 hidden border-b border-black pb-4 print:block">
+            <p className="font-display text-lg font-semibold text-brand-900">Al-Furqan Madrasah</p>
+            <p className="text-sm text-brand-600">Grade Overview</p>
+          </div>
+
+          <table className="w-full text-left text-sm">
+            <thead className="bg-accent-800 text-white">
+              <tr>
+                <th className="w-10 px-3 py-3 print:hidden"></th>
+                <th className="px-5 py-3 font-medium">Student Name</th>
+                <th className="px-5 py-3 font-medium">Student ID</th>
+                <th className="px-5 py-3 text-right font-medium">Overall Average</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-brand-100">
+              {loading && (
+                <tr>
+                  <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
+                    Loading...
+                  </td>
+                </tr>
+              )}
               {!loading && sectionId && rows.length === 0 && (
-                <TableEmptyRow colSpan={4}>No records found.</TableEmptyRow>
+                <tr>
+                  <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
+                    No records found.
+                  </td>
+                </tr>
               )}
               {!loading && !sectionId && (
-                <TableEmptyRow colSpan={4}>
-                  Select school year and class to view grades.
-                </TableEmptyRow>
+                <tr>
+                  <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
+                    Select school year and class to view grades.
+                  </td>
+                </tr>
               )}
               {rows.map((row) => {
                 const isExpanded = expandedStudentId === row.studentId;
@@ -261,12 +288,12 @@ export function GradeLookup() {
 
                 return (
                   <Fragment key={row.studentId}>
-                    <tr className="hover:bg-brand-50 dark:hover:bg-brand-800/60">
-                      <td className="px-3 py-3 text-center">
+                    <tr className="hover:bg-brand-50">
+                      <td className="px-3 py-3 text-center print:hidden">
                         <button
                           onClick={() => toggleExpand(row.studentId)}
                           aria-label="Toggle details"
-                          className="rounded p-1 text-brand-500 hover:bg-brand-100 dark:text-brand-400 dark:hover:bg-brand-800"
+                          className="rounded p-1 text-brand-500 hover:bg-brand-100"
                         >
                           <ChevronDown
                             className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
@@ -276,27 +303,27 @@ export function GradeLookup() {
                       <td className="px-5 py-3">
                         <button
                           onClick={() => openModal(row.studentId)}
-                          className="font-medium text-brand-900 hover:underline dark:text-white"
+                          className="font-medium text-brand-900 hover:underline print:pointer-events-none"
                         >
                           {row.name}
                         </button>
                       </td>
-                      <Td>{row.studentCode}</Td>
-                      <td className="px-5 py-3 text-right font-semibold text-brand-900 dark:text-white">
+                      <td className="px-5 py-3 text-brand-600">{row.studentCode}</td>
+                      <td className="px-5 py-3 text-right font-semibold text-brand-900">
                         {row.total.toFixed(2)}
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr className="bg-brand-50 dark:bg-brand-800/40">
+                      <tr className="bg-brand-50 print:hidden">
                         <td colSpan={4} className="px-5 py-4">
                           {isExpandLoading && (
-                            <p className="text-sm text-brand-500 dark:text-brand-400">Loading...</p>
+                            <p className="text-sm text-brand-500">Loading...</p>
                           )}
                           {!isExpandLoading && card && (
                             <div className="space-y-4">
                               {card.subjects.map((subject) => (
                                 <div key={subject.subjectId} className="overflow-x-auto">
-                                  <h5 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-brand-500 dark:text-brand-400">
+                                  <h5 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-brand-500">
                                     {subject.subjectName}
                                   </h5>
                                   <SubjectBreakdownTable subject={subject} />
@@ -310,8 +337,8 @@ export function GradeLookup() {
                   </Fragment>
                 );
               })}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
 
