@@ -10,7 +10,12 @@ export interface ClassGradeSheetData {
     schoolYear: { label: string };
     teacherName: string;
   };
-  students: { id: string; studentId: string; name: string; total: number }[];
+  students: {
+    id: string;
+    studentId: string;
+    name: string;
+    total: number | null;
+  }[];
   gradeItems: {
     id: string;
     date: string;
@@ -24,11 +29,19 @@ export interface ClassGradeSheetData {
 // every grade item in a subject, plus each student's precomputed total.
 // Shared by the public whole-class gradebook and (via the authorized
 // wrapper below) the teacher grade-entry API route and its printable page.
-export async function getClassGradeSheet(subjectId: string): Promise<ClassGradeSheetData | null> {
+export async function getClassGradeSheet(
+  subjectId: string,
+): Promise<ClassGradeSheetData | null> {
   const subject = await prisma.subject.findUnique({
     where: { id: subjectId },
     include: {
-      section: { select: { id: true, name: true, schoolYear: { select: { label: true } } } },
+      section: {
+        select: {
+          id: true,
+          name: true,
+          schoolYear: { select: { label: true } },
+        },
+      },
       teacher: { select: { userId: true, user: { select: { name: true } } } },
     },
   });
@@ -44,7 +57,9 @@ export async function getClassGradeSheet(subjectId: string): Promise<ClassGradeS
     prisma.enrollment.findMany({
       where: { sectionId: subject.sectionId },
       orderBy: { student: { name: "asc" } },
-      select: { student: { select: { id: true, studentId: true, name: true } } },
+      select: {
+        student: { select: { id: true, studentId: true, name: true } },
+      },
     }),
   ]);
 
@@ -65,7 +80,7 @@ export async function getClassGradeSheet(subjectId: string): Promise<ClassGradeS
         component: item.component,
         maxScore: item.maxScore,
         score: item.scores[student.id] ?? null,
-      }))
+      })),
     ),
   }));
 
@@ -88,8 +103,9 @@ export async function getClassGradeSheet(subjectId: string): Promise<ClassGradeS
 export async function getAuthorizedClassGradeSheet(
   subjectId: string,
   userId: string,
-  isAdmin: boolean
+  isAdmin: boolean,
 ): Promise<ClassGradeSheetData | null> {
+  if (!(await prisma.user.findUnique({ where: { id: userId } }))) return null;
   const subject = await prisma.subject.findUnique({
     where: { id: subjectId },
     select: { teacher: { select: { userId: true } } },

@@ -1,446 +1,298 @@
 "use client";
-
-import { Fragment, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Download, X } from "lucide-react";
-import { Select } from "@/components/ui";
-import {
-  ReportCardView,
-  SubjectBreakdownTable,
-  type ReportCardData,
-} from "@/components/report-card";
+import { Modal, Select } from "@/components/ui";
+import { ReportCardView, type ReportCardData } from "@/components/report-card";
 import { ClassGradebookGrid } from "@/components/class-gradebook-grid";
 import { PrintButton } from "@/components/print-button";
+import { useResource } from "@/lib/use-resource";
+import { compareGradeRows } from "@/lib/grade-sort";
+import { formatGrade } from "@/lib/grade-math";
 import type { ClassGradeSheetData } from "@/lib/class-grade-sheet-data";
-
 interface Option {
   id: string;
   name?: string;
   label?: string;
 }
-
 interface GradeRow {
   studentId: string;
   studentCode: string;
   name: string;
-  total: number;
+  total: number | null;
 }
-
 type SortKey = "name" | "studentCode" | "total";
-
-function SortIcon({
-  column,
-  sortKey,
-  sortDir,
-}: {
-  column: SortKey;
-  sortKey: SortKey;
-  sortDir: "asc" | "desc";
-}) {
-  if (sortKey !== column) return null;
-  return sortDir === "asc" ? (
-    <ChevronUp className="h-3.5 w-3.5" />
-  ) : (
-    <ChevronDown className="h-3.5 w-3.5" />
-  );
-}
-
 export function GradeLookup() {
-  const [schoolYears, setSchoolYears] = useState<Option[]>([]);
-  const [sections, setSections] = useState<Option[]>([]);
-  const [subjects, setSubjects] = useState<Option[]>([]);
-
-  const [schoolYearId, setSchoolYearId] = useState("");
-  const [sectionId, setSectionId] = useState("");
-  const [subjectId, setSubjectId] = useState("");
-
-  const [rows, setRows] = useState<GradeRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  const [classSheet, setClassSheet] = useState<ClassGradeSheetData | null>(null);
-  const [classSheetLoading, setClassSheetLoading] = useState(false);
-
-  const [reportCards, setReportCards] = useState<Record<string, ReportCardData>>({});
-  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
-  const [expandLoadingId, setExpandLoadingId] = useState<string | null>(null);
-
-  const [modalStudentId, setModalStudentId] = useState<string | null>(null);
-  const [modalLoading, setModalLoading] = useState(false);
-
-  // Load school years on mount
-  useEffect(() => {
-    fetch("/api/school-years")
-      .then((r) => r.json())
-      .then(setSchoolYears)
-      .catch(() => setSchoolYears([]));
-  }, []);
-
-  // Load sections when school year changes
-  useEffect(() => {
-    setSectionId("");
-    setSubjectId("");
-    setSections([]);
-    setSubjects([]);
-    setRows([]);
-    setReportCards({});
-    setExpandedStudentId(null);
-    if (!schoolYearId) return;
-    fetch(`/api/sections?schoolYearId=${schoolYearId}`)
-      .then((r) => r.json())
-      .then(setSections)
-      .catch(() => setSections([]));
-  }, [schoolYearId]);
-
-  // Load subjects when section changes
-  useEffect(() => {
-    setSubjectId("");
-    setSubjects([]);
-    if (!sectionId) return;
-    fetch(`/api/subjects?sectionId=${sectionId}`)
-      .then((r) => r.json())
-      .then(setSubjects)
-      .catch(() => setSubjects([]));
-  }, [sectionId]);
-
-  // No subject selected: load the simple name+overall-average list.
-  useEffect(() => {
-    setRows([]);
-    setReportCards({});
-    setExpandedStudentId(null);
-    if (!sectionId || subjectId) return;
-    setLoading(true);
-    fetch(`/api/grades?sectionId=${sectionId}`)
-      .then((r) => r.json())
-      .then(setRows)
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
-  }, [sectionId, subjectId]);
-
-  // Subject selected: load the full whole-class gradebook grid.
-  useEffect(() => {
-    setClassSheet(null);
-    if (!subjectId) return;
-    setClassSheetLoading(true);
-    fetch(`/api/grades/class-sheet?subjectId=${subjectId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setClassSheet)
-      .catch(() => setClassSheet(null))
-      .finally(() => setClassSheetLoading(false));
-  }, [subjectId]);
-
-  async function fetchReportCard(studentId: string): Promise<ReportCardData | null> {
-    if (reportCards[studentId]) return reportCards[studentId];
-    const res = await fetch(
-      `/api/grades/breakdown?sectionId=${sectionId}&studentId=${studentId}`
-    );
-    if (!res.ok) return null;
-    const data: ReportCardData = await res.json();
-    setReportCards((prev) => ({ ...prev, [studentId]: data }));
-    return data;
-  }
-
-  async function toggleExpand(studentId: string) {
-    if (expandedStudentId === studentId) {
-      setExpandedStudentId(null);
-      return;
-    }
-    setExpandedStudentId(studentId);
-    if (!reportCards[studentId]) {
-      setExpandLoadingId(studentId);
-      await fetchReportCard(studentId);
-      setExpandLoadingId(null);
+  const [year, setYear] = useState("");
+  const [section, setSection] = useState("");
+  const [subject, setSubject] = useState("");
+  const [student, setStudent] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortKey>("name");
+  const [direction, setDirection] = useState<"asc" | "desc">("asc");
+  const years = useResource<Option[]>("/api/school-years");
+  const sections = useResource<Option[]>(
+    year ? `/api/sections?schoolYearId=${encodeURIComponent(year)}` : null,
+  );
+  const subjects = useResource<Option[]>(
+    section ? `/api/subjects?sectionId=${encodeURIComponent(section)}` : null,
+  );
+  const overview = useResource<GradeRow[]>(
+    section && !subject
+      ? `/api/grades?sectionId=${encodeURIComponent(section)}`
+      : null,
+  );
+  const sheet = useResource<ClassGradeSheetData>(
+    subject
+      ? `/api/grades/class-sheet?subjectId=${encodeURIComponent(subject)}`
+      : null,
+  );
+  const report = useResource<ReportCardData>(
+    student && section
+      ? `/api/grades/breakdown?sectionId=${encodeURIComponent(section)}&studentId=${encodeURIComponent(student)}`
+      : null,
+  );
+  const current = subject ? sheet : overview;
+  const count = subject ? sheet.data?.students.length : overview.data?.length;
+  const ready = !!section && !current.loading && !current.error && !!count;
+  const rows = [...(overview.data ?? [])].sort((a, b) =>
+    compareGradeRows(a, b, sort, direction),
+  );
+  function toggle(key: SortKey) {
+    if (key === sort) setDirection((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSort(key);
+      setDirection("asc");
     }
   }
-
-  async function openModal(studentId: string) {
-    setModalStudentId(studentId);
-    if (!reportCards[studentId]) {
-      setModalLoading(true);
-      await fetchReportCard(studentId);
-      setModalLoading(false);
-    }
-  }
-
-  const modalCard = modalStudentId ? reportCards[modalStudentId] : null;
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
-
-  const sortedRows = [...rows].sort((a, b) => {
-    const cmp =
-      sortKey === "total"
-        ? a.total - b.total
-        : a[sortKey].localeCompare(b[sortKey], undefined, { numeric: true, sensitivity: "base" });
-    return sortDir === "asc" ? cmp : -cmp;
-  });
-
+  const yearLabel = years.data?.find((y) => y.id === year)?.label;
+  const sectionLabel = sections.data?.find((s) => s.id === section)?.name;
   return (
     <div>
-      {/* Filters */}
-      <div className="grid gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6 dark:border-brand-800 dark:bg-brand-900/60 md:grid-cols-3 print:hidden">
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            School Year
-          </label>
-          <Select value={schoolYearId} onChange={(e) => setSchoolYearId(e.target.value)}>
+      <div className="grid gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6 dark:border-brand-700 dark:bg-brand-900 md:grid-cols-3 print:hidden">
+        <label className="text-sm font-medium">
+          School year
+          <Select
+            aria-label="School year"
+            value={year}
+            onChange={(e) => {
+              setYear(e.target.value);
+              setSection("");
+              setSubject("");
+              setStudent(null);
+            }}
+          >
             <option value="">Select year</option>
-            {schoolYears.map((sy) => (
-              <option key={sy.id} value={sy.id}>
-                {sy.label}
+            {years.data?.map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.label}
               </option>
             ))}
           </Select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            Class / Section
-          </label>
+        </label>
+        <label className="text-sm font-medium">
+          Class / Section
           <Select
-            value={sectionId}
-            onChange={(e) => setSectionId(e.target.value)}
-            disabled={!schoolYearId}
+            aria-label="Class / Section"
+            disabled={!year || sections.loading}
+            value={section}
+            onChange={(e) => {
+              setSection(e.target.value);
+              setSubject("");
+              setStudent(null);
+            }}
           >
             <option value="">Select class</option>
-            {sections.map((s) => (
+            {sections.data?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </Select>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            Subject
-          </label>
+        </label>
+        <label className="text-sm font-medium">
+          Subject
           <Select
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
-            disabled={!sectionId}
+            aria-label="Subject"
+            disabled={!section || subjects.loading}
+            value={subject}
+            onChange={(e) => {
+              setSubject(e.target.value);
+              setStudent(null);
+            }}
           >
-            <option value="">Select subject</option>
-            {subjects.map((s) => (
+            <option value="">All subjects - overall average</option>
+            {subjects.data?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </Select>
-        </div>
+        </label>
       </div>
-
-      {subjectId ? (
-        /* Whole-class gradebook — a self-contained light "paper" block so
-           it reads correctly both on screen (any theme) and when printed. */
-        <div className="mt-8 rounded-xl border border-brand-200 bg-white p-6 print:rounded-none print:border-0 print:p-0">
-          {classSheetLoading && <p className="text-sm text-brand-500">Loading...</p>}
-          {!classSheetLoading && !classSheet && (
-            <p className="text-sm text-brand-500">No records found.</p>
+      {[years, sections, subjects].map(
+        (resource, i) =>
+          resource.error && (
+            <p
+              key={i}
+              role="alert"
+              className="my-3 text-red-700 dark:text-red-300"
+            >
+              {resource.error}{" "}
+              <button onClick={resource.retry} className="underline">
+                Retry
+              </button>
+            </p>
+          ),
+      )}
+      <div className="my-5 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <p className="text-sm">
+          {ready
+            ? `${count} students - click a column heading to sort`
+            : "Choose a class to load a printable report."}
+        </p>
+        <PrintButton disabled={!ready} />
+      </div>
+      <section
+        className="paper-report rounded-xl border border-brand-200 bg-white p-5 text-brand-900 print:rounded-none print:border-0 print:p-0"
+        aria-busy={current.loading}
+      >
+        <header className="mb-5 border-b border-brand-300 pb-4">
+          <p className="font-display text-xl font-semibold">
+            Al-Furqan Madrasah
+          </p>
+          <h2 className="mt-1 text-lg font-semibold">
+            {subject
+              ? (sheet.data?.subject.name ?? "Class Grade Sheet")
+              : "Class Grade Overview"}
+          </h2>
+          <p className="text-sm text-brand-700">
+            {sectionLabel || "No class selected"}
+            {yearLabel && ` - School year ${yearLabel}`}
+          </p>
+          {sheet.data && subject && (
+            <p className="text-sm text-brand-700">
+              Teacher: {sheet.data.subject.teacherName}
+            </p>
           )}
-          {!classSheetLoading && classSheet && (
-            <>
-              <div className="mb-4 flex items-center justify-end print:hidden">
-                <PrintButton />
-              </div>
-
-              <div className="mb-4 hidden border-b border-black pb-4 print:block">
-                <p className="font-display text-lg font-semibold text-brand-900">
-                  Al-Furqan Madrasah
-                </p>
-                <p className="text-sm text-brand-600">Class Grade Sheet</p>
-              </div>
-
-              <div className="mb-4">
-                <h2 className="font-display text-lg font-semibold text-brand-900">
-                  {classSheet.subject.name} &middot; {classSheet.subject.section.name}
-                </h2>
-                <p className="text-xs text-brand-500">
-                  {classSheet.subject.schoolYear.label} &middot; {classSheet.subject.teacherName}
-                </p>
-              </div>
-
-              <ClassGradebookGrid data={classSheet} />
-            </>
+          <p className="mt-2 text-xs text-brand-600">
+            Provisional grades - recorded scores only - generated{" "}
+            {new Date().toLocaleDateString("en-GB")}
+          </p>
+        </header>
+        {current.loading && <p role="status">Loading grades...</p>}
+        {current.error && (
+          <p role="alert">
+            {current.error}{" "}
+            <button onClick={current.retry} className="underline print:hidden">
+              Retry
+            </button>
+          </p>
+        )}
+        {!section && <p>Select a school year and class above.</p>}
+        {section && !current.loading && !current.error && count === 0 && (
+          <p>No enrolled students found.</p>
+        )}
+        {ready && subject && sheet.data && (
+          <ClassGradebookGrid data={sheet.data} />
+        )}
+        {ready && !subject && (
+          <div className="overflow-x-auto print:overflow-visible">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-accent-800 text-white">
+                <tr>
+                  {(
+                    [
+                      ["name", "Student Name"],
+                      ["studentCode", "Student ID"],
+                      ["total", "Overall Average"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <th
+                      key={key}
+                      scope="col"
+                      aria-sort={
+                        sort === key
+                          ? direction === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
+                      className="px-4 py-3"
+                    >
+                      <button
+                        className="flex items-center gap-2 text-left focus-visible:outline-2"
+                        onClick={() => toggle(key)}
+                      >
+                        {label}
+                        <span aria-hidden="true">
+                          {sort === key
+                            ? direction === "asc"
+                              ? "↑"
+                              : "↓"
+                            : "↕"}
+                        </span>
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-brand-200">
+                {rows.map((row) => (
+                  <tr key={row.studentId} className="break-inside-avoid">
+                    <td className="px-4 py-3">
+                      <button
+                        className="text-left font-medium underline decoration-brand-300 underline-offset-4"
+                        onClick={() => setStudent(row.studentId)}
+                        aria-label={`View report card for ${row.name}`}
+                      >
+                        {row.name}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">{row.studentCode}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      {formatGrade(row.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {ready && (
+          <footer className="mt-5 border-t border-brand-200 pt-3 text-xs text-brand-700">
+            Scores are shown out of 100. Not graded is excluded from averages; a
+            recorded zero is included. This report is not a certified
+            transcript.
+          </footer>
+        )}
+      </section>
+      {student && (
+        <Modal
+          title="Student report card"
+          maxWidth="max-w-4xl"
+          onClose={() => setStudent(null)}
+        >
+          <div className="mb-4 flex justify-end gap-4">
+            <Link
+              className="text-accent-700 underline dark:text-accent-300"
+              href={`/grades/transcript/${student}/print?sectionId=${section}`}
+              target="_blank"
+            >
+              Print / Save as PDF
+            </Link>
+            <button onClick={() => setStudent(null)}>Close</button>
+          </div>
+          {report.loading && <p role="status">Loading report...</p>}
+          {report.error && (
+            <p role="alert">
+              {report.error} <button onClick={report.retry}>Retry</button>
+            </p>
           )}
-        </div>
-      ) : (
-        /* No subject selected — browse every student's overall average
-           across all subjects, with a per-student expand/modal/print.
-           Same self-contained light "paper" card as the gradebook view,
-           so this prints correctly too regardless of on-screen theme. */
-        <div className="mt-8 rounded-xl border border-brand-200 bg-white p-6 print:rounded-none print:border-0 print:p-0">
-          {sectionId && (
-            <div className="mb-4 flex items-center justify-end print:hidden">
-              <PrintButton />
+          {report.data && (
+            <div className="paper-report rounded bg-white p-4 text-brand-900">
+              <ReportCardView card={report.data} />
             </div>
           )}
-
-          <div className="mb-4 hidden border-b border-black pb-4 print:block">
-            <p className="font-display text-lg font-semibold text-brand-900">Al-Furqan Madrasah</p>
-            <p className="text-sm text-brand-600">Grade Overview</p>
-          </div>
-
-          <table className="w-full text-left text-sm">
-            <thead className="bg-accent-800 text-white">
-              <tr>
-                <th className="w-10 px-3 py-3 print:hidden"></th>
-                <th className="px-5 py-3 font-medium">
-                  <button
-                    onClick={() => handleSort("name")}
-                    className="flex items-center gap-1 hover:underline print:pointer-events-none"
-                  >
-                    Student Name
-                    <SortIcon column="name" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
-                <th className="px-5 py-3 font-medium">
-                  <button
-                    onClick={() => handleSort("studentCode")}
-                    className="flex items-center gap-1 hover:underline print:pointer-events-none"
-                  >
-                    Student ID
-                    <SortIcon column="studentCode" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
-                <th className="px-5 py-3 text-right font-medium">
-                  <button
-                    onClick={() => handleSort("total")}
-                    className="ml-auto flex items-center gap-1 hover:underline print:pointer-events-none"
-                  >
-                    Overall Average
-                    <SortIcon column="total" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-100">
-              {loading && (
-                <tr>
-                  <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
-                    Loading...
-                  </td>
-                </tr>
-              )}
-              {!loading && sectionId && rows.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
-                    No records found.
-                  </td>
-                </tr>
-              )}
-              {!loading && !sectionId && (
-                <tr>
-                  <td colSpan={4} className="px-5 py-6 text-center text-brand-500">
-                    Select school year and class to view grades.
-                  </td>
-                </tr>
-              )}
-              {sortedRows.map((row) => {
-                const isExpanded = expandedStudentId === row.studentId;
-                const card = reportCards[row.studentId];
-                const isExpandLoading = expandLoadingId === row.studentId;
-
-                return (
-                  <Fragment key={row.studentId}>
-                    <tr className="hover:bg-brand-50">
-                      <td className="px-3 py-3 text-center print:hidden">
-                        <button
-                          onClick={() => toggleExpand(row.studentId)}
-                          aria-label="Toggle details"
-                          className="rounded p-1 text-brand-500 hover:bg-brand-100"
-                        >
-                          <ChevronDown
-                            className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                          />
-                        </button>
-                      </td>
-                      <td className="px-5 py-3">
-                        <button
-                          onClick={() => openModal(row.studentId)}
-                          className="font-medium text-brand-900 hover:underline print:pointer-events-none"
-                        >
-                          {row.name}
-                        </button>
-                      </td>
-                      <td className="px-5 py-3 text-brand-600">{row.studentCode}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-brand-900">
-                        {row.total.toFixed(2)}
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr className="bg-brand-50 print:hidden">
-                        <td colSpan={4} className="px-5 py-4">
-                          {isExpandLoading && (
-                            <p className="text-sm text-brand-500">Loading...</p>
-                          )}
-                          {!isExpandLoading && card && (
-                            <div className="space-y-4">
-                              {card.subjects.map((subject) => (
-                                <div key={subject.subjectId} className="overflow-x-auto">
-                                  <h5 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-brand-500">
-                                    {subject.subjectName}
-                                  </h5>
-                                  <SubjectBreakdownTable subject={subject} />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Full report card modal (no-subject-selected browsing only) */}
-      {modalStudentId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 print:hidden"
-          onClick={() => setModalStudentId(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
-          >
-            {modalLoading && <p className="py-10 text-center text-brand-500">Loading...</p>}
-            {modalCard && !modalLoading && (
-              <>
-                <div className="mb-2 flex items-start justify-end gap-2">
-                  <Link
-                    href={`/grades/transcript/${modalStudentId}/print?sectionId=${sectionId}`}
-                    target="_blank"
-                    className="flex items-center gap-1.5 rounded-md border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-700 transition hover:bg-brand-50"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Download / Print
-                  </Link>
-                  <button
-                    onClick={() => setModalStudentId(null)}
-                    className="rounded-full p-1.5 text-brand-400 hover:bg-brand-100 hover:text-brand-700"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <ReportCardView card={modalCard} />
-              </>
-            )}
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

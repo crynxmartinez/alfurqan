@@ -1,56 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/require-staff";
-
+import { requireAdminOnly } from "@/lib/require-staff";
+import { saveSchoolYear } from "@/lib/school-year-write";
+import { archiveRecord } from "@/lib/archive";
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireStaff();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const body = await req.json();
-  const { label, isActive } = body;
-
-  if (isActive) {
-    await prisma.schoolYear.updateMany({
-      where: { isActive: true, NOT: { id } },
-      data: { isActive: false },
-    });
-  }
-
-  const schoolYear = await prisma.schoolYear.update({
-    where: { id },
-    data: {
-      ...(label !== undefined ? { label } : {}),
-      ...(isActive !== undefined ? { isActive } : {}),
-    },
-  });
-
-  return NextResponse.json(schoolYear);
-}
-
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await requireStaff();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-
+  const session = await requireAdminOnly();
+  if (!session)
+    return NextResponse.json(
+      { error: "Only administrators can change shared school years." },
+      { status: 403 },
+    );
   try {
-    await prisma.schoolYear.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      await saveSchoolYear(
+        session.user.id,
+        await req.json(),
+        (await params).id,
+      ),
+    );
   } catch {
     return NextResponse.json(
-      { error: "Cannot delete: this school year has related records." },
-      { status: 409 }
+      { error: "Year could not be saved. Check for a duplicate label." },
+      { status: 409 },
     );
   }
+}
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await requireAdminOnly();
+  if (!session)
+    return NextResponse.json(
+      { error: "Only administrators can archive school years." },
+      { status: 403 },
+    );
+  return NextResponse.json(
+    await archiveRecord("schoolYear", (await params).id, session.user.id),
+  );
 }

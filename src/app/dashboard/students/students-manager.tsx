@@ -1,5 +1,7 @@
 "use client";
 
+import { safeFetch } from "@/lib/use-resource";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -23,6 +25,8 @@ interface Student {
 }
 
 export function StudentsManager() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "ADMIN";
   const [items, setItems] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -37,7 +41,7 @@ export function StudentsManager() {
   async function load() {
     setLoading(true);
     setLoadError(null);
-    const res = await fetch("/api/admin/students");
+    const res = await safeFetch("/api/admin/students");
     if (!res.ok) {
       setLoadError("Failed to load students.");
       setLoading(false);
@@ -70,10 +74,12 @@ export function StudentsManager() {
     setSaving(true);
     setError(null);
 
-    const url = editing ? `/api/admin/students/${editing.id}` : "/api/admin/students";
+    const url = editing
+      ? `/api/admin/students/${editing.id}`
+      : "/api/admin/students";
     const method = editing ? "PATCH" : "POST";
 
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
@@ -92,8 +98,15 @@ export function StudentsManager() {
   }
 
   async function handleDelete(item: Student) {
-    if (!confirm(`Delete student "${item.name}"? This cannot be undone.`)) return;
-    const res = await fetch(`/api/admin/students/${item.id}`, { method: "DELETE" });
+    if (
+      !confirm(
+        `Archive student "${item.name}"? Records are preserved. An administrator can restore archived records.`,
+      )
+    )
+      return;
+    const res = await safeFetch(`/api/admin/students/${item.id}`, {
+      method: "DELETE",
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       alert(data.error ?? "Failed to delete.");
@@ -105,7 +118,7 @@ export function StudentsManager() {
   const filtered = items.filter(
     (s) =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.studentId.toLowerCase().includes(search.toLowerCase())
+      s.studentId.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -138,14 +151,24 @@ export function StudentsManager() {
           {filtered.map((item) => (
             <tr key={item.id}>
               <Td>{item.studentId}</Td>
-              <Td className="font-medium text-brand-900 dark:text-white">{item.name}</Td>
+              <Td className="font-medium text-brand-900 dark:text-white">
+                {item.name}
+              </Td>
               <Td>{item._count.enrollments}</Td>
               <Td className="text-right">
-                <Button variant="link" className="mr-3" onClick={() => openEdit(item)}>
+                <Button
+                  variant="link"
+                  className="mr-3"
+                  onClick={() => openEdit(item)}
+                >
                   Edit
                 </Button>
-                <Button variant="link-danger" onClick={() => handleDelete(item)}>
-                  Delete
+                <Button
+                  variant="link-danger"
+                  disabled={!isAdmin}
+                  onClick={() => handleDelete(item)}
+                >
+                  Archive
                 </Button>
               </Td>
             </tr>
@@ -154,7 +177,10 @@ export function StudentsManager() {
       </Table>
 
       {showForm && (
-        <Modal onClose={() => setShowForm(false)} title={editing ? "Edit Student" : "Add Student"}>
+        <Modal
+          onClose={() => setShowForm(false)}
+          title={editing ? "Edit Student" : "Add Student"}
+        >
           <form onSubmit={handleSubmit}>
             {error && <ErrorBanner>{error}</ErrorBanner>}
 
@@ -175,7 +201,11 @@ export function StudentsManager() {
             />
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowForm(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={saving}>

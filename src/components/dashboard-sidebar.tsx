@@ -16,13 +16,17 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/dashboard/sections", label: "Sections" },
   { href: "/dashboard/subjects", label: "Subjects" },
   { href: "/dashboard/teachers", label: "Teachers" },
+  { href: "/dashboard/recovery", label: "Recovery & History" },
   { href: "/dashboard/students", label: "Students" },
   { href: "/dashboard/enrollments", label: "Enrollments" },
 ];
 
 const TEACHER_NAV: NavItem[] = [
-  ...ADMIN_NAV.filter((item) => item.href !== "/dashboard/teachers"),
-  { href: "/dashboard/my-subjects", label: "My Subjects" },
+  ...ADMIN_NAV.filter(
+    (item) =>
+      !["/dashboard/teachers", "/dashboard/recovery"].includes(item.href),
+  ),
+  { href: "/dashboard/my-subjects", label: "My Classes & Subjects" },
   { href: "/dashboard/grade-entry", label: "Grade Entry" },
 ];
 

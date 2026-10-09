@@ -18,7 +18,7 @@ export function DashboardShell({
   return (
     <div className="min-h-screen bg-brand-50 dark:bg-brand-950">
       {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-brand-200 bg-white px-4 py-3 dark:border-brand-800 dark:bg-brand-900 lg:hidden">
+      <div className="print:hidden fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-brand-200 bg-white px-4 py-3 dark:border-brand-800 dark:bg-brand-900 lg:hidden">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-brand-800 bg-brand-900 text-white dark:border-accent-600 dark:bg-accent-700">
             <School className="h-4 w-4" strokeWidth={1.5} />
@@ -39,21 +39,25 @@ export function DashboardShell({
       {/* Mobile drawer backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="print:hidden fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Sidebar: fixed to viewport on all breakpoints, sliding drawer on mobile */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:translate-x-0 ${
+        className={`print:hidden fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <DashboardSidebar role={role} name={name} onNavigate={() => setOpen(false)} />
+        <DashboardSidebar
+          role={role}
+          name={name}
+          onNavigate={() => setOpen(false)}
+        />
       </div>
 
-      <main className="px-4 py-6 pt-20 sm:px-6 lg:ml-64 lg:px-8 lg:py-8 lg:pt-8">
+      <main className="print:ml-0 print:p-0 px-4 py-6 pt-20 sm:px-6 lg:ml-64 lg:px-8 lg:py-8 lg:pt-8">
         {children}
       </main>
     </div>

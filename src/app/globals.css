@@ -71,3 +71,49 @@ body {
     color: black;
   }
 }
+
+/* Report surfaces have their own explicit paper palette in either app theme. */
+.paper-report {
+  color-scheme: light;
+  background: white;
+  color: #232429;
+}
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #0e8277;
+  outline-offset: 3px;
+}
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  body,
+  main {
+    background: white !important;
+    color: black !important;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
+  .paper-report {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .paper-report table {
+    width: 100%;
+  }
+  .paper-report .sticky {
+    position: static;
+  }
+  .grade-sheet-part + .grade-sheet-part {
+    break-before: page;
+    padding-top: 8mm;
+  }
+  .grade-sheet-part {
+    overflow: visible;
+    border-radius: 0;
+  }
+}

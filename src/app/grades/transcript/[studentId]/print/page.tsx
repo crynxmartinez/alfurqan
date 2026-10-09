@@ -20,11 +20,15 @@ export default async function StudentTranscriptPrintPage({
   if (!card) notFound();
 
   return (
-    <div className="mx-auto min-h-screen max-w-3xl bg-white px-6 py-10 text-brand-900 print:px-0 print:py-0">
+    <div className="paper-report mx-auto min-h-screen max-w-3xl bg-white px-6 py-10 text-brand-900 print:px-0 print:py-0">
       <div className="mb-8 flex items-start justify-between border-b border-brand-200 pb-6 print:hidden">
         <div>
-          <p className="font-display text-lg font-semibold">Al-Furqan Madrasah</p>
-          <p className="text-sm text-brand-500">Official Grade Transcript</p>
+          <p className="font-display text-lg font-semibold">
+            Al-Furqan Madrasah
+          </p>
+          <p className="text-sm text-brand-500">
+            Student Grade Report · Provisional
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -39,13 +43,18 @@ export default async function StudentTranscriptPrintPage({
 
       <div className="mb-8 hidden border-b border-black pb-4 print:block">
         <p className="font-display text-xl font-semibold">Al-Furqan Madrasah</p>
-        <p className="text-sm">Official Grade Transcript</p>
+        <p className="text-sm">Student Grade Report · Provisional</p>
       </div>
 
       <ReportCardView card={card} />
 
       <p className="mt-10 text-center text-xs text-brand-400 print:text-black">
-        Generated {new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+        Generated{" "}
+        {new Date().toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })}
       </p>
     </div>
   );

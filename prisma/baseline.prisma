@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+}
+
+// Tracks ever-increasing sequence counters (e.g. "employeeId", "studentId")
+// used to auto-generate IDs. Values never decrease, even if records are deleted.
+model Counter {
+  name  String @id
+  value Int    @default(0)
+}
+
+enum GradeComponent {
+  QUIZ
+  ASSIGNMENT
+  OTHERS
+  EXAM
+}
+
+// Staff accounts only (Admin/Teacher). Students have no login.
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  teacher      Teacher?
+}
+
+model Teacher {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId String?   @unique
+  subjects   Subject[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Student {
+  id          String       @id @default(cuid())
+  studentId   String       @unique
+  name        String
+  enrollments Enrollment[]
+  gradeEntries GradeEntry[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model SchoolYear {
+  id          String       @id @default(cuid())
+  label       String       @unique // e.g. "2025-2026"
+  isActive    Boolean      @default(false)
+  sections    Section[]
+  enrollments Enrollment[]
+  createdAt   DateTime     @default(now())
+}
+
+// A grade/room, e.g. "Grade 1 - A"
+model Section {
+  id           String       @id @default(cuid())
+  name         String
+  schoolYearId String
+  schoolYear   SchoolYear   @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  enrollments  Enrollment[]
+  subjects     Subject[]
+  createdAt    DateTime     @default(now())
+
+  @@unique([name, schoolYearId])
+}
+
+// A subject taught in one specific Section (grade/room), with exactly one
+// teacher assigned. e.g. "Tawheed" in Grade 1-A taught by Ustadh Ahmad, and a
+// separate "Tawheed" row for Grade 1-B possibly taught by a different teacher.
+model Subject {
+  id         String      @id @default(cuid())
+  name       String
+  sectionId  String
+  section    Section     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  teacherId  String
+  teacher    Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  gradeItems GradeItem[]
+  createdAt  DateTime    @default(now())
+
+  @@unique([name, sectionId])
+}
+
+model Enrollment {
+  id           String     @id @default(cuid())
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sectionId    String
+  section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  schoolYearId String
+  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([studentId, sectionId, schoolYearId])
+}
+
+// An individual gradable column, identified by its date within a category
+// (Quiz/Assignment/Others/Exam). Scoped to a Subject (already specific to
+// one section/teacher).
+// Fixed weighting: QUIZ 20%, ASSIGNMENT 10%, OTHERS 10%, EXAM 60%
+// (applied at aggregation time)
+model GradeItem {
+  id         String         @id @default(cuid())
+  subjectId  String
+  subject    Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  date       DateTime       // date this column represents, e.g. 2026-04-04
+  component  GradeComponent
+  maxScore   Float          @default(100)
+  entries    GradeEntry[]
+  createdAt  DateTime       @default(now())
+}
+
+model GradeEntry {
+  id          String    @id @default(cuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItemId String
+  gradeItem   GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  score       Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([studentId, gradeItemId])
+}

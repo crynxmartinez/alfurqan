@@ -37,3 +37,9 @@ jobs:
 
       - name: Build
         run: npx next build
+
+      - name: Install browser test runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser regression tests (synthetic records)
+        run: npm run test:browser

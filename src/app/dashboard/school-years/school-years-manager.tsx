@@ -1,5 +1,7 @@
 "use client";
 
+import { safeFetch } from "@/lib/use-resource";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   Badge,
@@ -24,6 +26,8 @@ interface SchoolYear {
 }
 
 export function SchoolYearsManager() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "ADMIN";
   const [items, setItems] = useState<SchoolYear[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -35,8 +39,12 @@ export function SchoolYearsManager() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/admin/school-years");
-    setItems(await res.json());
+    const res = await safeFetch("/api/admin/school-years");
+    if (res.ok) setItems(await res.json());
+    else {
+      setItems([]);
+      setError("Could not load records. Please retry.");
+    }
     setLoading(false);
   }
 
@@ -70,7 +78,7 @@ export function SchoolYearsManager() {
       : "/api/admin/school-years";
     const method = editing ? "PATCH" : "POST";
 
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label, isActive }),
@@ -89,10 +97,14 @@ export function SchoolYearsManager() {
   }
 
   async function handleDelete(item: SchoolYear) {
-    if (!confirm(`Delete school year "${item.label}"? This cannot be undone.`)) {
+    if (
+      !confirm(
+        `Archive school year "${item.label}"? Records are preserved. An administrator can restore archived records.`,
+      )
+    ) {
       return;
     }
-    const res = await fetch(`/api/admin/school-years/${item.id}`, {
+    const res = await safeFetch(`/api/admin/school-years/${item.id}`, {
       method: "DELETE",
     });
     if (!res.ok) {
@@ -105,6 +117,7 @@ export function SchoolYearsManager() {
 
   return (
     <div>
+      {error && !showForm && <ErrorBanner>{error}</ErrorBanner>}
       <div className="mb-4 flex justify-end">
         <Button onClick={openCreate}>+ Add School Year</Button>
       </div>
@@ -123,7 +136,9 @@ export function SchoolYearsManager() {
           )}
           {items.map((item) => (
             <tr key={item.id}>
-              <Td className="font-medium text-brand-900 dark:text-white">{item.label}</Td>
+              <Td className="font-medium text-brand-900 dark:text-white">
+                {item.label}
+              </Td>
               <Td>
                 {item.isActive ? (
                   <Badge tone="success">Active</Badge>
@@ -133,11 +148,20 @@ export function SchoolYearsManager() {
               </Td>
               <Td>{item._count.sections}</Td>
               <Td className="text-right">
-                <Button variant="link" className="mr-3" onClick={() => openEdit(item)}>
+                <Button
+                  variant="link"
+                  disabled={!isAdmin}
+                  className="mr-3"
+                  onClick={() => openEdit(item)}
+                >
                   Edit
                 </Button>
-                <Button variant="link-danger" onClick={() => handleDelete(item)}>
-                  Delete
+                <Button
+                  variant="link-danger"
+                  disabled={!isAdmin}
+                  onClick={() => handleDelete(item)}
+                >
+                  Archive
                 </Button>
               </Td>
             </tr>
@@ -165,6 +189,7 @@ export function SchoolYearsManager() {
             <label className="mb-4 flex items-center gap-2 text-sm text-brand-700 dark:text-brand-300">
               <input
                 type="checkbox"
+                disabled={!isAdmin}
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
                 className="h-4 w-4 rounded border-brand-300"
@@ -173,7 +198,11 @@ export function SchoolYearsManager() {
             </label>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowForm(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={saving}>

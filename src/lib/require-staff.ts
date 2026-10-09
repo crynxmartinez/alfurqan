@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
 // Admin and Teacher both manage school data (school years, sections,
@@ -5,9 +6,17 @@ import { auth } from "@/lib/auth";
 // itself stays Admin-only (see requireAdminOnly).
 export async function requireStaff() {
   const session = await auth();
-  if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+  if (
+    !session?.user ||
+    (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")
+  ) {
     return null;
   }
+  const current = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if (!current || current.role !== session.user.role) return null;
   return session;
 }
 
@@ -16,5 +25,10 @@ export async function requireStaff() {
 export async function requireAdminOnly() {
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") return null;
+  const current = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  if (!current || current.role !== session.user.role) return null;
   return session;
 }

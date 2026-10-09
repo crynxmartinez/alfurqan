@@ -1,207 +1,213 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import {
-  Button,
-  Card,
-  ErrorBanner,
-  FieldLabel,
-  Select,
-  Table,
-  TableBody,
-  TableEmptyRow,
-  TableHead,
-  Td,
-  Th,
-} from "@/components/ui";
-
-interface SchoolYearOption {
-  id: string;
-  label: string;
-}
-
-interface SectionOption {
-  id: string;
-  name: string;
-}
-
-interface StudentOption {
+import { useState } from "react";
+import { Button, Input, Select } from "@/components/ui";
+import { useResource, readJson } from "@/lib/use-resource";
+interface Student {
   id: string;
   studentId: string;
   name: string;
 }
-
-interface Enrollment {
-  id: string;
-  student: StudentOption;
-}
-
-export function EnrollmentsManager() {
-  const [schoolYears, setSchoolYears] = useState<SchoolYearOption[]>([]);
-  const [sections, setSections] = useState<SectionOption[]>([]);
-  const [schoolYearId, setSchoolYearId] = useState("");
-  const [sectionId, setSectionId] = useState("");
-
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [availableStudents, setAvailableStudents] = useState<StudentOption[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const [addStudentId, setAddStudentId] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/school-years")
-      .then((r) => r.json())
-      .then(setSchoolYears);
-  }, []);
-
-  useEffect(() => {
-    setSectionId("");
-    setSections([]);
-    setEnrollments([]);
-    if (!schoolYearId) return;
-    fetch(`/api/sections?schoolYearId=${schoolYearId}`)
-      .then((r) => r.json())
-      .then(setSections);
-  }, [schoolYearId]);
-
-  async function loadEnrollments() {
-    if (!sectionId) {
-      setEnrollments([]);
-      setAvailableStudents([]);
-      return;
+export function EnrollmentsManager({
+  initialYear = "",
+  initialSection = "",
+}: {
+  initialYear?: string;
+  initialSection?: string;
+}) {
+  const [year, setYear] = useState(initialYear);
+  const [section, setSection] = useState(initialSection);
+  const [student, setStudent] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const years =
+    useResource<{ id: string; label: string }[]>("/api/school-years");
+  const sections = useResource<{ id: string; name: string }[]>(
+    year ? `/api/admin/sections?schoolYearId=${year}` : null,
+  );
+  const enrolled = useResource<{ id: string; student: Student }[]>(
+    section ? `/api/admin/enrollments?sectionId=${section}` : null,
+  );
+  const available = useResource<Student[]>(
+    section ? `/api/admin/students/available?sectionId=${section}` : null,
+  );
+  async function mutate(url: string, method: string, body?: object) {
+    setBusy(true);
+    setError("");
+    try {
+      await readJson(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      setName("");
+      setStudent("");
+      enrolled.retry();
+      available.retry();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
     }
-    setLoading(true);
-    const [enrollRes, availRes] = await Promise.all([
-      fetch(`/api/admin/enrollments?sectionId=${sectionId}`),
-      fetch(`/api/admin/students/available?sectionId=${sectionId}`),
-    ]);
-    setEnrollments(await enrollRes.json());
-    setAvailableStudents(await availRes.json());
-    setLoading(false);
   }
-
-  useEffect(() => {
-    loadEnrollments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sectionId]);
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!addStudentId) return;
-    setAdding(true);
-    setError(null);
-
-    const res = await fetch("/api/admin/enrollments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: addStudentId, sectionId, schoolYearId }),
-    });
-
-    setAdding(false);
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Something went wrong.");
-      return;
-    }
-
-    setAddStudentId("");
-    loadEnrollments();
-  }
-
-  async function handleRemove(enrollment: Enrollment) {
-    if (!confirm(`Remove ${enrollment.student.name} from this section?`)) return;
-    const res = await fetch(`/api/admin/enrollments/${enrollment.id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
-      alert("Failed to remove.");
-      return;
-    }
-    loadEnrollments();
-  }
-
   return (
-    <div>
-      <Card className="mb-6 grid gap-4 p-6 md:grid-cols-2">
-        <div>
-          <FieldLabel>School Year</FieldLabel>
-          <Select value={schoolYearId} onChange={(e) => setSchoolYearId(e.target.value)}>
-            <option value="">Select year</option>
-            {schoolYears.map((sy) => (
-              <option key={sy.id} value={sy.id}>
-                {sy.label}
+    <div className="space-y-5">
+      <div className="grid gap-4 md:grid-cols-2">
+        <label>
+          School year
+          <Select
+            value={year}
+            disabled={busy}
+            onChange={(e) => {
+              setYear(e.target.value);
+              setSection("");
+              setStudent("");
+            }}
+          >
+            <option value="">Choose year</option>
+            {years.data?.map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.label}
               </option>
             ))}
           </Select>
-        </div>
-        <div>
-          <FieldLabel>Grade / Section</FieldLabel>
+        </label>
+        <label>
+          Your class
           <Select
-            value={sectionId}
-            onChange={(e) => setSectionId(e.target.value)}
-            disabled={!schoolYearId}
+            value={section}
+            disabled={!year || busy}
+            onChange={(e) => {
+              setSection(e.target.value);
+              setStudent("");
+            }}
           >
-            <option value="">Select section</option>
-            {sections.map((s) => (
+            <option value="">Choose class</option>
+            {sections.data?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </Select>
-        </div>
-      </Card>
-
-      {sectionId && (
+        </label>
+      </div>
+      {[years, sections, enrolled, available].map(
+        (r, i) =>
+          r.error && (
+            <p key={i} role="alert">
+              {r.error} <button onClick={r.retry}>Retry</button>
+            </p>
+          ),
+      )}
+      {error && (
+        <p role="alert" className="text-red-700 dark:text-red-300">
+          {error}
+        </p>
+      )}
+      {section && (
         <>
-          <Card className="mb-4 bg-white p-4 dark:bg-brand-900">
-            <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-3">
-              <div className="min-w-[200px] flex-1">
-                <FieldLabel>Add Student</FieldLabel>
-                <Select value={addStudentId} onChange={(e) => setAddStudentId(e.target.value)}>
-                  <option value="">Select student</option>
-                  {availableStudents.map((s) => (
+          <div className="grid gap-5 md:grid-cols-2">
+            <form
+              className="rounded border border-brand-300 p-4 dark:border-brand-700"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void mutate("/api/admin/students", "POST", {
+                  name,
+                  sectionId: section,
+                });
+              }}
+            >
+              <label>
+                New student name
+                <Input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </label>
+              <Button className="mt-3" disabled={busy || !name.trim()}>
+                Create and enroll student
+              </Button>
+            </form>
+            <form
+              className="rounded border border-brand-300 p-4 dark:border-brand-700"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void mutate("/api/admin/enrollments", "POST", {
+                  studentId: student,
+                  sectionId: section,
+                });
+              }}
+            >
+              <label>
+                Existing student
+                <Select
+                  required
+                  value={student}
+                  onChange={(e) => setStudent(e.target.value)}
+                >
+                  <option value="">Choose student</option>
+                  {available.data?.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.studentId})
                     </option>
                   ))}
                 </Select>
-              </div>
-              <Button type="submit" disabled={!addStudentId || adding}>
-                {adding ? "Adding..." : "Add"}
+              </label>
+              <Button className="mt-3" disabled={busy || !student}>
+                Enroll student
               </Button>
             </form>
-          </Card>
-
-          {error && <ErrorBanner>{error}</ErrorBanner>}
-
-          <Table>
-            <TableHead>
-              <Th>Student ID</Th>
-              <Th>Name</Th>
-              <Th className="text-right">Actions</Th>
-            </TableHead>
-            <TableBody>
-              {loading && <TableEmptyRow colSpan={3}>Loading...</TableEmptyRow>}
-              {!loading && enrollments.length === 0 && (
-                <TableEmptyRow colSpan={3}>No students enrolled yet.</TableEmptyRow>
-              )}
-              {enrollments.map((e) => (
-                <tr key={e.id}>
-                  <Td>{e.student.studentId}</Td>
-                  <Td className="font-medium text-brand-900 dark:text-white">{e.student.name}</Td>
-                  <Td className="text-right">
-                    <Button variant="link-danger" onClick={() => handleRemove(e)}>
-                      Remove
-                    </Button>
-                  </Td>
+          </div>
+          {enrolled.loading && <p>Loading students...</p>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr>
+                  <th className="p-3">Student</th>
+                  <th>ID</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </TableBody>
-          </Table>
+              </thead>
+              <tbody>
+                {enrolled.data?.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-t border-brand-200 dark:border-brand-700"
+                  >
+                    <td className="p-3">{row.student.name}</td>
+                    <td>{row.student.studentId}</td>
+                    <td>
+                      <Button
+                        variant="link-danger"
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `Remove ${row.student.name} from this class? Their scores will be preserved.`,
+                            )
+                          )
+                            void mutate(
+                              `/api/admin/enrollments/${row.id}`,
+                              "DELETE",
+                            );
+                        }}
+                      >
+                        Remove from class
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
+      )}
+      {year && sections.data?.length === 0 && (
+        <p>
+          Create a class in Sections or add your subject to an existing class in
+          Subjects first.
+        </p>
       )}
     </div>
   );

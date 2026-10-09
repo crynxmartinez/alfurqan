@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/require-staff";
 
 // Subjects taught by the currently logged-in teacher.
 export async function GET() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "TEACHER") {
+  const session = await requireStaff();
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -13,18 +13,25 @@ export async function GET() {
     where: { userId: session.user.id },
   });
 
-  if (!teacher) {
+  if (!teacher && session.user.role !== "ADMIN") {
     return NextResponse.json([]);
   }
 
   const subjects = await prisma.subject.findMany({
-    where: { teacherId: teacher.id },
-    orderBy: [{ section: { schoolYear: { label: "desc" } } }, { section: { name: "asc" } }],
+    where: session.user.role === "ADMIN" ? {} : { teacherId: teacher!.id },
+    orderBy: [
+      { section: { schoolYear: { label: "desc" } } },
+      { section: { name: "asc" } },
+    ],
     include: {
       section: {
-        select: { id: true, name: true, schoolYear: { select: { id: true, label: true } } },
+        select: {
+          id: true,
+          name: true,
+          schoolYear: { select: { id: true, label: true } },
+        },
       },
-      _count: { select: { gradeItems: true } },
+      _count: { select: { gradeItems: { where: { archivedAt: null } } } },
     },
   });
 

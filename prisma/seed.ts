@@ -4,8 +4,28 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  const url = new URL(
+    process.env.DIRECT_URL || process.env.DATABASE_URL || "http://invalid",
+  );
+  if (
+    process.env.SEED_DEMO !== "1" ||
+    !["localhost", "127.0.0.1"].includes(url.hostname) ||
+    !/_(test|dev)$/.test(url.pathname)
+  )
+    throw new Error(
+      "Demo seed only runs with SEED_DEMO=1 on a local database ending in _test or _dev.",
+    );
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const teacherPassword = process.env.SEED_TEACHER_PASSWORD;
+  if (
+    !adminPassword ||
+    !teacherPassword ||
+    adminPassword.length < 12 ||
+    teacherPassword.length < 12
+  )
+    throw new Error("Set test passwords of at least 12 characters.");
   // Admin user
-  const adminPasswordHash = await bcrypt.hash("Admin123!", 10);
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
   const admin = await prisma.user.upsert({
     where: { email: "admin@alfurqan.edu" },
     update: {},
@@ -18,7 +38,7 @@ async function main() {
   });
 
   // Teacher user
-  const teacherPasswordHash = await bcrypt.hash("Teacher123!", 10);
+  const teacherPasswordHash = await bcrypt.hash(teacherPassword, 10);
   const teacherUser = await prisma.user.upsert({
     where: { email: "teacher@alfurqan.edu" },
     update: {},
@@ -48,7 +68,9 @@ async function main() {
 
   // Section (grade/room)
   const section = await prisma.section.upsert({
-    where: { name_schoolYearId: { name: "Grade 7 - A", schoolYearId: schoolYear.id } },
+    where: {
+      name_schoolYearId: { name: "Grade 7 - A", schoolYearId: schoolYear.id },
+    },
     update: {},
     create: { name: "Grade 7 - A", schoolYearId: schoolYear.id },
   });
@@ -57,7 +79,11 @@ async function main() {
   const subject = await prisma.subject.upsert({
     where: { name_sectionId: { name: "Mathematics", sectionId: section.id } },
     update: {},
-    create: { name: "Mathematics", sectionId: section.id, teacherId: teacher.id },
+    create: {
+      name: "Mathematics",
+      sectionId: section.id,
+      teacherId: teacher.id,
+    },
   });
 
   // Students
@@ -94,7 +120,11 @@ async function main() {
   }
 
   // Grade items
-  const gradeItemsData: { date: Date; component: GradeComponent; maxScore: number }[] = [
+  const gradeItemsData: {
+    date: Date;
+    component: GradeComponent;
+    maxScore: number;
+  }[] = [
     { date: new Date("2025-09-08"), component: "QUIZ", maxScore: 10 },
     { date: new Date("2025-09-22"), component: "QUIZ", maxScore: 10 },
     { date: new Date("2025-09-15"), component: "ASSIGNMENT", maxScore: 20 },
@@ -142,8 +172,6 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log("Admin login: admin@alfurqan.edu / Admin123!");
-  console.log("Teacher login: teacher@alfurqan.edu / Teacher123!");
   console.log(`Admin user id: ${admin.id}`);
 }
 

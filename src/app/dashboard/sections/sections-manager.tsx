@@ -1,5 +1,7 @@
 "use client";
 
+import { safeFetch } from "@/lib/use-resource";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -29,6 +31,8 @@ interface Section {
 }
 
 export function SectionsManager() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "ADMIN";
   const [schoolYears, setSchoolYears] = useState<SchoolYearOption[]>([]);
   const [filterYearId, setFilterYearId] = useState("");
 
@@ -43,17 +47,23 @@ export function SectionsManager() {
   const [saving, setSaving] = useState(false);
 
   async function loadSchoolYears() {
-    const res = await fetch("/api/school-years");
-    setSchoolYears(await res.json());
+    const res = await safeFetch("/api/school-years");
+    if (res.ok) setSchoolYears(await res.json());
+    else setError("Could not load school years.");
   }
 
-  async function load() {
+  async function load(signal?: AbortSignal) {
     setLoading(true);
     const url = filterYearId
       ? `/api/admin/sections?schoolYearId=${filterYearId}`
       : "/api/admin/sections";
-    const res = await fetch(url);
-    setItems(await res.json());
+    const res = await safeFetch(url, { signal });
+    if (signal?.aborted) return;
+    if (res.ok) setItems(await res.json());
+    else {
+      setItems([]);
+      setError("Could not load records. Please retry.");
+    }
     setLoading(false);
   }
 
@@ -62,7 +72,9 @@ export function SectionsManager() {
   }, []);
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterYearId]);
 
@@ -87,11 +99,13 @@ export function SectionsManager() {
     setSaving(true);
     setError(null);
 
-    const url = editing ? `/api/admin/sections/${editing.id}` : "/api/admin/sections";
+    const url = editing
+      ? `/api/admin/sections/${editing.id}`
+      : "/api/admin/sections";
     const method = editing ? "PATCH" : "POST";
     const body = editing ? { name } : { name, schoolYearId: formYearId };
 
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -110,8 +124,15 @@ export function SectionsManager() {
   }
 
   async function handleDelete(item: Section) {
-    if (!confirm(`Delete section "${item.name}"? This cannot be undone.`)) return;
-    const res = await fetch(`/api/admin/sections/${item.id}`, { method: "DELETE" });
+    if (
+      !confirm(
+        `Archive section "${item.name}"? Records are preserved. An administrator can restore archived records.`,
+      )
+    )
+      return;
+    const res = await safeFetch(`/api/admin/sections/${item.id}`, {
+      method: "DELETE",
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       alert(data.error ?? "Failed to delete.");
@@ -122,6 +143,7 @@ export function SectionsManager() {
 
   return (
     <div>
+      {error && !showForm && <ErrorBanner>{error}</ErrorBanner>}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Select
           value={filterYearId}
@@ -154,16 +176,26 @@ export function SectionsManager() {
           )}
           {items.map((item) => (
             <tr key={item.id}>
-              <Td className="font-medium text-brand-900 dark:text-white">{item.name}</Td>
+              <Td className="font-medium text-brand-900 dark:text-white">
+                {item.name}
+              </Td>
               <Td>{item.schoolYear.label}</Td>
               <Td>{item._count.enrollments}</Td>
               <Td>{item._count.subjects}</Td>
               <Td className="text-right">
-                <Button variant="link" className="mr-3" onClick={() => openEdit(item)}>
+                <Button
+                  variant="link"
+                  className="mr-3"
+                  onClick={() => openEdit(item)}
+                >
                   Edit
                 </Button>
-                <Button variant="link-danger" onClick={() => handleDelete(item)}>
-                  Delete
+                <Button
+                  variant="link-danger"
+                  disabled={!isAdmin}
+                  onClick={() => handleDelete(item)}
+                >
+                  Archive
                 </Button>
               </Td>
             </tr>
@@ -172,7 +204,10 @@ export function SectionsManager() {
       </Table>
 
       {showForm && (
-        <Modal onClose={() => setShowForm(false)} title={editing ? "Edit Section" : "Add Section"}>
+        <Modal
+          onClose={() => setShowForm(false)}
+          title={editing ? "Edit Section" : "Add Section"}
+        >
           <form onSubmit={handleSubmit}>
             {error && <ErrorBanner>{error}</ErrorBanner>}
 
@@ -205,7 +240,11 @@ export function SectionsManager() {
             />
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowForm(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={saving}>

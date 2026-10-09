@@ -1,35 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-
-async function canAccessItem(itemId: string) {
-  const session = await auth();
-  if (!session?.user) return false;
-
-  const item = await prisma.gradeItem.findUnique({
-    where: { id: itemId },
-    include: {
-      subject: { include: { teacher: { select: { userId: true } } } },
-    },
-  });
-
-  if (!item) return false;
-  const isOwner = item.subject.teacher.userId === session.user.id;
-  const isAdmin = session.user.role === "ADMIN";
-  return isOwner || isAdmin;
-}
-
+import { requireStaff } from "@/lib/require-staff";
+import { canManageSubject } from "@/lib/access";
+import { archiveRecord } from "@/lib/archive";
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-
-  const allowed = await canAccessItem(id);
-  if (!allowed) {
+  const session = await requireStaff();
+  if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  await prisma.gradeItem.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  const { id } = await params;
+  const item = await prisma.gradeItem.findUnique({ where: { id } });
+  if (!item || !(await canManageSubject(session.user, item.subjectId)))
+    return NextResponse.json(
+      { error: "This item is outside your classes." },
+      { status: 403 },
+    );
+  return NextResponse.json(
+    await archiveRecord("gradeItem", id, session.user.id),
+  );
 }

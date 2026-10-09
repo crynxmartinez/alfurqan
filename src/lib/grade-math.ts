@@ -25,7 +25,7 @@ export interface GradeItemWithEntry {
  * Exam 60%). Components with no items are excluded and weights are
  * re-normalized across the components that do have items.
  */
-export function computeTotalGrade(items: GradeItemWithEntry[]): number {
+export function computeTotalGrade(items: GradeItemWithEntry[]): number | null {
   const byComponent: Record<GradeComponent, { earned: number; max: number }> = {
     QUIZ: { earned: 0, max: 0 },
     ASSIGNMENT: { earned: 0, max: 0 },
@@ -51,7 +51,7 @@ export function computeTotalGrade(items: GradeItemWithEntry[]): number {
     totalWeight += weight;
   });
 
-  if (totalWeight === 0) return 0;
+  if (totalWeight === 0) return null;
   return Math.round((weightedSum / totalWeight) * 100) / 100;
 }
 
@@ -59,8 +59,20 @@ export function computeTotalGrade(items: GradeItemWithEntry[]): number {
  * Computes a simple average of per-subject totals for a student's report
  * card. Subjects with no recorded items/scores are excluded.
  */
-export function computeOverallAverage(subjectTotals: number[]): number {
-  if (subjectTotals.length === 0) return 0;
-  const sum = subjectTotals.reduce((acc, t) => acc + t, 0);
-  return Math.round((sum / subjectTotals.length) * 100) / 100;
+export function computeOverallAverage(
+  subjectTotals: (number | null)[],
+): number | null {
+  const graded = subjectTotals.filter(
+    (value): value is number => value !== null && Number.isFinite(value),
+  );
+  if (!graded.length) return null;
+  return (
+    Math.round(
+      (graded.reduce((sum, value) => sum + value, 0) / graded.length) * 100,
+    ) / 100
+  );
+}
+
+export function formatGrade(value: number | null): string {
+  return value === null ? "Not graded" : value.toFixed(2);
 }

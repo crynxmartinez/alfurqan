@@ -1,5 +1,7 @@
 "use client";
 
+import { safeFetch } from "@/lib/use-resource";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
   Button,
@@ -24,6 +26,8 @@ interface Teacher {
 }
 
 export function TeachersManager() {
+  const { data: session } = useSession();
+  const isAdmin = session?.user.role === "ADMIN";
   const [items, setItems] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -39,7 +43,7 @@ export function TeachersManager() {
   async function load() {
     setLoading(true);
     setLoadError(null);
-    const res = await fetch("/api/admin/teachers");
+    const res = await safeFetch("/api/admin/teachers");
     if (!res.ok) {
       setLoadError("Failed to load teachers.");
       setLoading(false);
@@ -76,12 +80,14 @@ export function TeachersManager() {
     setSaving(true);
     setError(null);
 
-    const url = editing ? `/api/admin/teachers/${editing.id}` : "/api/admin/teachers";
+    const url = editing
+      ? `/api/admin/teachers/${editing.id}`
+      : "/api/admin/teachers";
     const method = editing ? "PATCH" : "POST";
     const body: Record<string, unknown> = { name, email };
     if (!editing || password) body.password = password;
 
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -100,8 +106,15 @@ export function TeachersManager() {
   }
 
   async function handleDelete(item: Teacher) {
-    if (!confirm(`Delete teacher "${item.user.name}"? This cannot be undone.`)) return;
-    const res = await fetch(`/api/admin/teachers/${item.id}`, { method: "DELETE" });
+    if (
+      !confirm(
+        `Archive teacher "${item.user.name}"? Records are preserved. An administrator can restore archived records.`,
+      )
+    )
+      return;
+    const res = await safeFetch(`/api/admin/teachers/${item.id}`, {
+      method: "DELETE",
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       alert(data.error ?? "Failed to delete.");
@@ -133,16 +146,26 @@ export function TeachersManager() {
           )}
           {items.map((item) => (
             <tr key={item.id}>
-              <Td className="font-medium text-brand-900 dark:text-white">{item.user.name}</Td>
+              <Td className="font-medium text-brand-900 dark:text-white">
+                {item.user.name}
+              </Td>
               <Td>{item.user.email}</Td>
               <Td>{item.employeeId ?? "—"}</Td>
               <Td>{item._count.subjects}</Td>
               <Td className="text-right">
-                <Button variant="link" className="mr-3" onClick={() => openEdit(item)}>
+                <Button
+                  variant="link"
+                  className="mr-3"
+                  onClick={() => openEdit(item)}
+                >
                   Edit
                 </Button>
-                <Button variant="link-danger" onClick={() => handleDelete(item)}>
-                  Delete
+                <Button
+                  variant="link-danger"
+                  disabled={!isAdmin}
+                  onClick={() => handleDelete(item)}
+                >
+                  Archive
                 </Button>
               </Td>
             </tr>
@@ -151,12 +174,20 @@ export function TeachersManager() {
       </Table>
 
       {showForm && (
-        <Modal onClose={() => setShowForm(false)} title={editing ? "Edit Teacher" : "Add Teacher"}>
+        <Modal
+          onClose={() => setShowForm(false)}
+          title={editing ? "Edit Teacher" : "Add Teacher"}
+        >
           <form onSubmit={handleSubmit}>
             {error && <ErrorBanner>{error}</ErrorBanner>}
 
             <FieldLabel>Full Name</FieldLabel>
-            <Input value={name} onChange={(e) => setName(e.target.value)} required className="mb-4" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="mb-4"
+            />
 
             <FieldLabel>Email</FieldLabel>
             <Input
@@ -168,7 +199,9 @@ export function TeachersManager() {
             />
 
             <FieldLabel>
-              {editing ? "New Password (leave blank to keep current)" : "Password"}
+              {editing
+                ? "New Password (leave blank to keep current)"
+                : "Password"}
             </FieldLabel>
             <PasswordInput
               value={password}
@@ -180,12 +213,20 @@ export function TeachersManager() {
             {editing && (
               <>
                 <FieldLabel>Employee ID</FieldLabel>
-                <Input value={editing.employeeId ?? ""} disabled className="mb-4" />
+                <Input
+                  value={editing.employeeId ?? ""}
+                  disabled
+                  className="mb-4"
+                />
               </>
             )}
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowForm(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={saving}>

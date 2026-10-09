@@ -1,8 +1,13 @@
 import { requireStaffPage } from "@/lib/require-admin-page";
 import { EnrollmentsManager } from "./enrollments-manager";
 
-export default async function EnrollmentsPage() {
+export default async function EnrollmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sectionId?: string; schoolYearId?: string }>;
+}) {
   await requireStaffPage();
+  const query = await searchParams;
 
   return (
     <div>
@@ -14,7 +19,10 @@ export default async function EnrollmentsPage() {
       </p>
 
       <div className="mt-6">
-        <EnrollmentsManager />
+        <EnrollmentsManager
+          initialYear={query.schoolYearId}
+          initialSection={query.sectionId}
+        />
       </div>
     </div>
   );

@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       gradeItems: {
+        where: { archivedAt: null },
         select: {
           id: true,
           date: true,
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
     });
 
     const grade = subjectId
-      ? (subjectTotals[0] ?? 0)
+      ? (subjectTotals[0] ?? null)
       : computeOverallAverage(subjectTotals);
 
     return {

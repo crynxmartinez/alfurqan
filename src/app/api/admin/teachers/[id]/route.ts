@@ -1,3 +1,4 @@
+import { archiveRecord } from "@/lib/archive";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -6,10 +7,11 @@ import { requireAdminOnly } from "@/lib/require-staff";
 // id here is the Teacher.id
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await requireAdminOnly();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const { name, email, password } = await req.json();
@@ -38,10 +40,11 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await requireAdminOnly();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
 
@@ -52,12 +55,12 @@ export async function DELETE(
 
   try {
     // Deleting the User cascades to delete the Teacher record.
-    await prisma.user.delete({ where: { id: teacher.userId } });
+    await archiveRecord("user", teacher.userId, session.user.id);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(
       { error: "Cannot delete: this teacher has related records." },
-      { status: 409 }
+      { status: 409 },
     );
   }
 }

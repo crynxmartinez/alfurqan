@@ -29,6 +29,7 @@ enum GradeComponent {
 
 // Staff accounts only (Admin/Teacher). Students have no login.
 model User {
+  archivedAt DateTime?
   id           String    @id @default(cuid())
   email        String    @unique
   passwordHash String
@@ -42,7 +43,7 @@ model User {
 model Teacher {
   id         String    @id @default(cuid())
   userId     String    @unique
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   employeeId String?   @unique
   subjects   Subject[]
   createdAt  DateTime  @default(now())
@@ -50,6 +51,8 @@ model Teacher {
 }
 
 model Student {
+  createdById String?
+  archivedAt DateTime?
   id          String       @id @default(cuid())
   studentId   String       @unique
   name        String
@@ -60,6 +63,8 @@ model Student {
 }
 
 model SchoolYear {
+  createdById String?
+  archivedAt DateTime?
   id          String       @id @default(cuid())
   label       String       @unique // e.g. "2025-2026"
   isActive    Boolean      @default(false)
@@ -70,10 +75,12 @@ model SchoolYear {
 
 // A grade/room, e.g. "Grade 1 - A"
 model Section {
+  createdById String?
+  archivedAt DateTime?
   id           String       @id @default(cuid())
   name         String
   schoolYearId String
-  schoolYear   SchoolYear   @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  schoolYear   SchoolYear   @relation(fields: [schoolYearId], references: [id], onDelete: Restrict)
   enrollments  Enrollment[]
   subjects     Subject[]
   createdAt    DateTime     @default(now())
@@ -85,12 +92,13 @@ model Section {
 // teacher assigned. e.g. "Tawheed" in Grade 1-A taught by Ustadh Ahmad, and a
 // separate "Tawheed" row for Grade 1-B possibly taught by a different teacher.
 model Subject {
+  archivedAt DateTime?
   id         String      @id @default(cuid())
   name       String
   sectionId  String
-  section    Section     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section    Section     @relation(fields: [sectionId], references: [id], onDelete: Restrict)
   teacherId  String
-  teacher    Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacher    Teacher     @relation(fields: [teacherId], references: [id], onDelete: Restrict)
   gradeItems GradeItem[]
   createdAt  DateTime    @default(now())
 
@@ -98,13 +106,14 @@ model Subject {
 }
 
 model Enrollment {
+  archivedAt DateTime?
   id           String     @id @default(cuid())
   studentId    String
-  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
   sectionId    String
-  section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  section      Section    @relation(fields: [sectionId], references: [id], onDelete: Restrict)
   schoolYearId String
-  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  schoolYear   SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Restrict)
   createdAt    DateTime   @default(now())
 
   @@unique([studentId, sectionId, schoolYearId])
@@ -116,9 +125,10 @@ model Enrollment {
 // Fixed weighting: QUIZ 20%, ASSIGNMENT 10%, OTHERS 10%, EXAM 60%
 // (applied at aggregation time)
 model GradeItem {
+  archivedAt DateTime?
   id         String         @id @default(cuid())
   subjectId  String
-  subject    Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject    Subject        @relation(fields: [subjectId], references: [id], onDelete: Restrict)
   date       DateTime       // date this column represents, e.g. 2026-04-04
   component  GradeComponent
   maxScore   Float          @default(100)
@@ -129,12 +139,25 @@ model GradeItem {
 model GradeEntry {
   id          String    @id @default(cuid())
   studentId   String
-  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
   gradeItemId String
-  gradeItem   GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  gradeItem   GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Restrict)
   score       Float
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@unique([studentId, gradeItemId])
+}
+
+// Immutable change history. Actor IDs remain even after an account is archived.
+model AuditLog {
+  id String @id @default(cuid())
+  actorId String
+  entity String
+  entityId String
+  action String
+  before Json?
+  after Json?
+  createdAt DateTime @default(now())
+  @@index([entity, entityId, createdAt])
 }

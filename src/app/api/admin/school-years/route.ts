@@ -1,3 +1,4 @@
+import { saveSchoolYear } from "@/lib/school-year-write";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/require-staff";
@@ -10,7 +11,9 @@ export async function GET() {
 
   const schoolYears = await prisma.schoolYear.findMany({
     orderBy: { label: "desc" },
-    include: { _count: { select: { sections: true } } },
+    include: {
+      _count: { select: { sections: { where: { archivedAt: null } } } },
+    },
   });
   return NextResponse.json(schoolYears);
 }
@@ -21,23 +24,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { label, isActive } = body;
-
-  if (!label || typeof label !== "string") {
-    return NextResponse.json({ error: "Label is required" }, { status: 400 });
+  try {
+    return NextResponse.json(
+      await saveSchoolYear(session.user.id, {
+        ...(await req.json()),
+        ...(session.user.role !== "ADMIN" ? { isActive: false } : {}),
+      }),
+      { status: 201 },
+    );
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          "Could not save year. Check its label and whether it already exists.",
+      },
+      { status: 409 },
+    );
   }
-
-  if (isActive) {
-    await prisma.schoolYear.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    });
-  }
-
-  const schoolYear = await prisma.schoolYear.create({
-    data: { label, isActive: !!isActive },
-  });
-
-  return NextResponse.json(schoolYear, { status: 201 });
 }

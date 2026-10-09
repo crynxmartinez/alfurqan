@@ -6,13 +6,14 @@ import { nextSequenceId } from "@/lib/sequence";
 
 export async function GET() {
   const session = await requireAdminOnly();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const teachers = await prisma.teacher.findMany({
     orderBy: { user: { name: "asc" } },
     include: {
       user: { select: { id: true, name: true, email: true } },
-      _count: { select: { subjects: true } },
+      _count: { select: { subjects: { where: { archivedAt: null } } } },
     },
   });
   return NextResponse.json(teachers);
@@ -20,13 +21,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await requireAdminOnly();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { name, email, password } = await req.json();
   if (!name || !email || !password) {
     return NextResponse.json(
       { error: "Name, email, and password are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (existing) {
     return NextResponse.json(
       { error: "A user with this email already exists." },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
         create: { employeeId },
       },
     },
-    include: { teacher: true },
+    select: { id: true, name: true, email: true, teacher: true },
   });
 
   return NextResponse.json(user, { status: 201 });

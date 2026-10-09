@@ -1,67 +1,82 @@
 "use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-
+import { useResource } from "@/lib/use-resource";
 interface Subject {
   id: string;
   name: string;
-  section: { id: string; name: string; schoolYear: { id: string; label: string } };
+  section: {
+    id: string;
+    name: string;
+    schoolYear: { id: string; label: string };
+  };
   _count: { gradeItems: number };
 }
-
 export function MySubjectsList() {
-  const [items, setItems] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/teacher/subjects")
-      .then((r) => r.json())
-      .then(setItems)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return <p className="text-sm text-brand-500 dark:text-brand-400">Loading...</p>;
-  }
-
-  if (items.length === 0) {
-    return (
-      <div>
-        <p className="mb-3 text-sm text-brand-500 dark:text-brand-400">
-          You have no subjects assigned yet.
-        </p>
+  const resource = useResource<Subject[]>("/api/teacher/subjects");
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-4">
         <Link
+          className="text-accent-700 underline dark:text-accent-300"
           href="/dashboard/subjects"
-          className="rounded-md bg-accent-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-800 dark:bg-accent-600 dark:hover:bg-accent-500"
         >
-          Go to Subjects
+          Add subject
+        </Link>
+        <Link
+          className="text-accent-700 underline dark:text-accent-300"
+          href="/dashboard/sections"
+        >
+          Create class
         </Link>
       </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {items.map((item) => (
-        <Link
-          key={item.id}
-          href={`/dashboard/grade-entry?subjectId=${item.id}`}
-          className="rounded-xl border border-brand-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-brand-800 dark:bg-brand-900 dark:hover:bg-brand-800"
-        >
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 dark:text-brand-400">
-            {item.section.schoolYear.label}
-          </p>
-          <h3 className="mt-1 font-display text-lg font-semibold text-brand-900 dark:text-white">
-            {item.name}
-          </h3>
-          <p className="mt-1 text-sm text-brand-600 dark:text-brand-400">{item.section.name}</p>
-          <p className="mt-3 text-xs text-brand-400 dark:text-brand-500">
-            {item._count.gradeItems} grade item
-            {item._count.gradeItems === 1 ? "" : "s"}
-          </p>
-        </Link>
-      ))}
+      {resource.loading && <p>Loading your classes...</p>}
+      {resource.error && (
+        <p role="alert">
+          {resource.error} <button onClick={resource.retry}>Retry</button>
+        </p>
+      )}
+      {resource.data?.length === 0 && (
+        <p>
+          Add your first subject to an existing class, or create a class first.
+          No admin approval is required.
+        </p>
+      )}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {resource.data?.map((item) => (
+          <article
+            key={item.id}
+            className="rounded-xl border border-brand-200 bg-white p-5 dark:border-brand-700 dark:bg-brand-900"
+          >
+            <p className="text-xs text-brand-600 dark:text-brand-300">
+              {item.section.schoolYear.label} · {item.section.name}
+            </p>
+            <h2 className="mt-2 font-display text-lg font-semibold">
+              {item.name}
+            </h2>
+            <p className="my-3 text-sm">{item._count.gradeItems} grade items</p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link
+                className="text-accent-700 underline dark:text-accent-300"
+                href={`/dashboard/grade-entry?subjectId=${item.id}`}
+              >
+                Enter grades
+              </Link>
+              <Link
+                className="text-accent-700 underline dark:text-accent-300"
+                href={`/dashboard/enrollments?sectionId=${item.section.id}&schoolYearId=${item.section.schoolYear.id}`}
+              >
+                Manage students
+              </Link>
+              <Link
+                className="text-accent-700 underline dark:text-accent-300"
+                href={`/dashboard/grade-entry/${item.id}/print`}
+              >
+                Print class
+              </Link>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

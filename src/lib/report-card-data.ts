@@ -6,8 +6,10 @@ import type { ReportCardData } from "@/components/report-card";
 // page, so both render from exactly the same data shape and aggregation.
 export async function getStudentReportCard(
   sectionId: string,
-  studentId: string
+  studentId: string,
 ): Promise<ReportCardData | null> {
+  if (!(await prisma.enrollment.findFirst({ where: { sectionId, studentId } })))
+    return null;
   const [section, subjectsData, student] = await Promise.all([
     prisma.section.findUnique({
       where: { id: sectionId },
@@ -21,6 +23,7 @@ export async function getStudentReportCard(
         name: true,
         teacher: { select: { user: { select: { name: true } } } },
         gradeItems: {
+          where: { archivedAt: null },
           orderBy: [{ component: "asc" }, { date: "asc" }],
           select: {
             id: true,

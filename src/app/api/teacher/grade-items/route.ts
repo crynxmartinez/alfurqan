@@ -1,45 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-
-async function canAccessSubject(subjectId: string) {
-  const session = await auth();
-  if (!session?.user) return false;
-
-  const subject = await prisma.subject.findUnique({
-    where: { id: subjectId },
-    include: { teacher: { select: { userId: true } } },
-  });
-
-  if (!subject) return false;
-  const isOwner = subject.teacher.userId === session.user.id;
-  const isAdmin = session.user.role === "ADMIN";
-  return isOwner || isAdmin;
-}
-
+import { rawPrisma } from "@/lib/prisma";
+import { requireStaff } from "@/lib/require-staff";
+import { canManageSubject } from "@/lib/access";
+import { parseGradeItem } from "@/lib/grade-validation";
+import { audit } from "@/lib/audit";
 export async function POST(req: NextRequest) {
-  const { subjectId, date, component, maxScore } = await req.json();
-
-  if (!subjectId || !date || !component) {
+  const session = await requireStaff();
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body.subjectId !== "string")
     return NextResponse.json(
-      { error: "subjectId, date, and component are required" },
-      { status: 400 }
+      { error: "Subject is required." },
+      { status: 400 },
+    );
+  if (!(await canManageSubject(session.user, body.subjectId)))
+    return NextResponse.json(
+      { error: "This subject is outside your classes." },
+      { status: 403 },
+    );
+  let data;
+  try {
+    data = parseGradeItem(body.date, body.component, body.maxScore);
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 400 },
     );
   }
-
-  const allowed = await canAccessSubject(subjectId);
-  if (!allowed) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const gradeItem = await prisma.gradeItem.create({
-    data: {
-      subjectId,
-      date: new Date(date),
-      component,
-      maxScore: maxScore ? Number(maxScore) : 100,
-    },
+  const item = await rawPrisma.$transaction(async (tx) => {
+    const item = await tx.gradeItem.create({
+      data: { subjectId: body.subjectId, ...data },
+    });
+    await audit(
+      tx,
+      session.user.id,
+      "gradeItem",
+      item.id,
+      "create",
+      null,
+      item,
+    );
+    return item;
   });
-
-  return NextResponse.json(gradeItem, { status: 201 });
+  return NextResponse.json(item, { status: 201 });
 }
